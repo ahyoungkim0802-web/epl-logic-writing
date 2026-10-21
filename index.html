@@ -1,0 +1,2992 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EPL Logic Writing Generator</title>
+<style>
+:root{
+  --ink:#1a1a1a; --graphite:#55534E; --mute:#8a8a8a; --faint:#b8b8b8;
+  --rule:#D5D2CC; --line:#e2e0dd; --dot:#d8d5d0; --fill:#f4f2ef; --accent:#2f4858;
+  --paper:#FFFFFF; --shell:#e9e7e2; --body:#2b2b2b;
+  --red:#b23a2e; --redsoft:#fbeae7; --navy:#2f4858; --nvsoft:#e8edf0; --gold:#9a7b3f;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--shell); color:var(--ink);
+  font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  font-size:11pt; line-height:1.5; padding:28px 12px 80px;
+}
+.serif{font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif}
+
+.toolbar{
+  position:sticky; top:0; z-index:50;
+  max-width:210mm; margin:0 auto 20px;
+  display:flex; gap:8px; align-items:center;
+  background:var(--ink); color:#fff; padding:10px 14px; border-radius:2px;
+}
+.toolbar h1{font-size:11px;letter-spacing:.22em;font-weight:600;text-transform:uppercase;margin-right:auto}
+.toolbar button{font:600 11px/1 ui-monospace,monospace;letter-spacing:.1em;
+  background:transparent;color:#fff;border:1px solid #6b6862;padding:8px 12px;border-radius:2px;cursor:pointer}
+.toolbar button:hover{background:#fff;color:var(--ink)}
+.toolbar button[aria-pressed="true"]{background:#fff;color:var(--ink);border-color:#fff}
+.toolbar button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+
+.page{width:210mm;min-height:297mm;margin:0 auto 16px;padding:13mm 14mm 16mm;
+  background:var(--paper);box-shadow:0 1px 4px rgba(0,0,0,.1);position:relative;overflow:visible}
+
+/* running header */
+.rh{display:flex;align-items:center;gap:11px;border-bottom:2px solid var(--ink);padding-bottom:6px;margin-bottom:4mm}
+.rh .rday{background:var(--red);color:#fff;font:700 10.5pt/1 var(--sans);padding:5px 10px;border-radius:3px}
+.rh .rcr{font:700 9pt/1 var(--sans);letter-spacing:.13em;color:var(--mute);text-transform:uppercase}
+.rh .rnd{margin-left:auto;font-size:8.5pt;color:var(--faint)}
+
+.h1{font-family:var(--serif);font-size:22pt;font-weight:600;letter-spacing:-.01em;margin:1mm 0 1mm}
+.h1 em{font-style:italic;color:var(--red)}
+.h1sm{font-family:var(--serif);font-size:20pt;font-weight:700;margin:1mm 0}
+.sub{font-size:9.5pt;color:var(--graphite);margin-bottom:4mm;line-height:1.45}
+.sub b{color:var(--ink)}
+
+/* logic spine */
+.spine{display:flex;margin-bottom:4mm;border:1px solid var(--line)}
+.spine div{flex:1;text-align:center;padding:5px 2px;font:600 7.5px/1.2 var(--mono);letter-spacing:.05em;color:var(--mute);border-right:1px solid var(--line)}
+.spine div:last-child{border-right:0}
+.spine div.on{background:var(--navy);color:#fff}
+
+/* section bands */
+.band{display:flex;align-items:center;gap:10px;background:var(--ink);color:#fff;padding:7px 12px;border-radius:5px;margin:4mm 0 3mm}
+.band .bn{width:20px;height:20px;border-radius:50%;background:#fff;color:var(--ink);display:flex;align-items:center;justify-content:center;font:700 10pt/1 var(--sans);flex:none}
+.band .bt{font:700 12pt/1 var(--sans)}
+.band .bmeta{margin-left:auto;font:600 8pt/1 var(--sans);letter-spacing:.1em;color:#c9c9c9;text-transform:uppercase}
+.gband{display:flex;align-items:baseline;gap:9px;margin:4mm 0 2mm}
+.gband .gtag{background:var(--gold);color:#fff;font:700 8pt/1 var(--sans);padding:5px 8px;border-radius:3px}
+.gband .gt{font-family:var(--serif);font-size:14pt;font-weight:600}
+.gband .ghint{margin-left:auto;font-style:italic;font-size:8.5pt;color:var(--mute)}
+
+.dir{font-size:9pt;color:var(--body);border-bottom:1px dashed var(--dot);padding-bottom:2.5mm;margin-bottom:2.5mm}
+.dir.plain{border:0;padding:0 0 2.5mm}
+
+/* background box */
+.bgbox{border:1px solid var(--line);border-left:3px solid var(--navy);border-radius:5px;padding:3.5mm 4mm;margin-bottom:2mm}
+.bgbox .bglbl{font:700 8pt/1 var(--mono);letter-spacing:.14em;color:var(--navy);text-transform:uppercase;margin-bottom:2mm}
+.bgbox p{font-size:10pt;line-height:1.6}
+
+/* vocab table */
+.vt{width:100%;border-collapse:collapse;font-size:9.5pt;border:1px solid var(--line)}
+.vt thead th{background:var(--ink);color:#fff;font:700 8pt/1 var(--sans);letter-spacing:.05em;text-align:left;padding:6px 8px;text-transform:uppercase}
+.vt td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.vt tr:last-child td{border-bottom:0}
+.vt tr:nth-child(even){background:#faf9f7}
+.vt .vw{color:var(--red);font-family:var(--serif);font-weight:700;font-size:10.5pt}
+.vt .vp{color:var(--mute);font-style:italic;font-size:8.5pt}
+.vt .vk{font-size:9pt;color:var(--body)}
+.vt .vd{font-size:9pt;color:var(--body)}
+
+/* word bank */
+.wbank{background:var(--redsoft);border:1px solid #f0d3ce;border-radius:8px;padding:3mm;margin-bottom:3mm;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center}
+.wbank .wtag{background:var(--red);color:#fff;font:700 7.5pt/1 var(--sans);letter-spacing:.08em;padding:5px 9px;border-radius:13px}
+.wbank .wchip{background:#fff;border:1px solid #e6bdb6;border-radius:13px;padding:5px 11px;font-size:9pt;font-weight:500}
+
+/* question lists */
+.qlist .qq{padding:2.5mm 0;border-bottom:1px dotted var(--dot)}
+.qlist.tight .qq{padding:2mm 0}
+.qlist .qq:last-child{border-bottom:0}
+.qq .qn{color:var(--red);font-weight:700;font-family:var(--serif)}
+.qq .stem{font-size:9.8pt;line-height:1.5}
+.qq .fl{display:inline-block;border-bottom:1px solid var(--ink);min-width:100px;margin:0 3px}
+.qq .opts{margin:1.5mm 0 0 6mm}
+.qq .opt{display:flex;gap:8px;padding:1px 0;font-size:9.3pt;line-height:1.45}
+.qq .opt .ol{font-family:var(--serif);font-weight:700;flex:none;width:13px}
+
+.badge{display:inline-block;font:700 7pt/1 var(--sans);letter-spacing:.04em;padding:3px 6px;border-radius:10px;vertical-align:middle;margin-left:4px}
+.badge.bi{background:var(--navy);color:#fff}
+.badge.ba{background:var(--gold);color:#fff}
+
+/* write boxes / lines */
+.wbox{border:1px solid var(--line);border-radius:5px;height:12mm;margin-top:2mm}
+.wl{border-bottom:1px solid var(--line);height:8mm}
+.salines{border:1px solid var(--line);border-radius:5px;padding:0 3mm;margin-top:2mm}
+.salines .wl:last-child{border-bottom:1px solid var(--line)}
+
+/* activity circle-word */
+.actwrap{border:1px solid var(--line);border-radius:7px;padding:3.5mm 4mm}
+.cw{display:flex;gap:10px 14px;align-items:center;padding:2.5mm 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.cw:last-child{border-bottom:0}
+.cw .cn{color:var(--red);font-weight:700;font-family:var(--serif);flex:none;width:15px}
+.cw .ct{flex:1 1 46mm;min-width:46mm;font-size:9.5pt;line-height:1.45}
+.cw .cp{display:flex;gap:7px;flex:1 1 auto;flex-wrap:wrap;justify-content:flex-end}
+.cw .pill{border:1px solid var(--dot);border-radius:15px;padding:5px 12px;font-family:var(--serif);font-weight:600;font-size:9.5pt;color:var(--navy);background:var(--nvsoft);white-space:normal;max-width:100%}
+
+/* think/plan */
+.tq{border:1px solid var(--ink);border-radius:2px}
+.tqr{display:flex;align-items:stretch;border-bottom:1px solid var(--line)}
+.tqr:last-child{border-bottom:0}
+.tqr .tqp{width:8mm;border-right:1px solid var(--line);background:var(--fill);position:relative;flex:none}
+.tqr .tqp:after{content:"";position:absolute;top:4mm;left:2mm;width:4mm;height:4mm;border:1px solid var(--graphite);background:#fff}
+.tqr .tqt{width:20mm;flex:none;border-right:1px solid var(--line);display:flex;align-items:center;justify-content:center;font:700 7.5px/1 var(--mono);letter-spacing:.08em;color:var(--navy)}
+.tqr .tqb{flex:1;padding:2.6mm 3mm;font-size:9.6pt;line-height:1.42}
+
+.moves{display:flex;gap:3px;margin-bottom:1mm}
+.moves .move{flex:1;border:1px solid var(--line);border-top:2px solid var(--navy);padding:2.2mm}
+.moves .mk{display:block;font:700 7px/1 var(--mono);letter-spacing:.1em;color:var(--navy)}
+.moves .men{display:block;font-size:8pt;color:var(--graphite);line-height:1.35;margin-top:1.5mm}
+
+.frame{border:1px solid var(--ink);background:var(--fill);padding:3mm}
+.frame .frow{display:flex;gap:6px;align-items:baseline}
+.frame .ftag{font:700 7.5px/1 var(--mono);letter-spacing:.08em;color:#fff;background:var(--navy);padding:3px 5px;border-radius:1px;white-space:nowrap;min-width:60px;text-align:center}
+.frame .fen{flex:1;font-size:9.5pt}
+.blank.lg{min-width:100%;display:block;height:6mm;border-bottom:1px solid var(--graphite)}
+
+.noteorg{border:1px solid var(--ink);margin-top:2mm}
+.noteorg.col5{display:flex}
+.noteorg.col5 .ncell{flex:1;border-right:1px solid var(--line);border-bottom:0}
+.noteorg.col5 .ncell:last-child{border-right:0}
+.noteorg .ncell{display:flex;border-bottom:1px solid var(--line)}
+.noteorg.col5 .ncell{display:block}
+.noteorg .ncell:last-child{border-bottom:0}
+.noteorg .nlbl{width:32mm;background:var(--fill);border-right:1px solid var(--line);padding:2.5mm;font:700 7.5px/1.3 var(--mono);letter-spacing:.06em;color:var(--navy);flex:none}
+.noteorg.col5 .nlbl{width:auto;border-right:0;border-bottom:1px solid var(--line)}
+.noteorg .nlbl small{display:block;font-family:inherit;color:var(--mute);letter-spacing:0;font-weight:400;margin-top:2px}
+.noteorg .nwr{flex:1;padding:2.5mm 2.5mm 0}
+
+/* writing page */
+.chosen{display:flex;align-items:baseline;gap:6px;border:1px solid var(--ink);border-bottom:0;background:var(--fill);padding:2.4mm 4mm;font:700 8px/1 var(--mono);letter-spacing:.1em;color:var(--navy)}
+.chosen .fl2{flex:1;border-bottom:1px solid var(--graphite);height:4mm}
+.chosen .tgt{color:var(--mute);letter-spacing:.06em}
+.ruled{border:1px solid var(--ink);border-bottom:0;padding:0 4mm}
+.ruled .rl{height:8.6mm;border-bottom:1px solid var(--line)}
+.wc{border:1px solid var(--ink);border-top:0;padding:2mm 4mm;font:600 8px/1 var(--mono);letter-spacing:.1em;color:var(--mute);text-align:right}
+.wc .bx{display:inline-block;width:14mm;border-bottom:1px solid var(--graphite)}
+.sc2{border:1px solid var(--line);border-radius:5px;margin-top:3mm;overflow:hidden}
+.sc2 .sclbl{background:var(--ink);color:#fff;padding:2.4mm 3mm;font:700 7.5px/1 var(--mono);letter-spacing:.1em}
+.sc2 .scitem{display:flex;justify-content:space-between;align-items:center;padding:2.2mm 3mm;border-bottom:1px solid var(--line);font-size:9pt}
+.sc2 .scitem:last-child{border-bottom:0}
+.sc2 .pdb{font:600 8.5pt/1 var(--mono);color:var(--mute);flex:none;margin-left:10px}
+
+/* cover */
+.page.cover{display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:24mm}
+.cover .cvtag{font:700 9pt/1 var(--sans);letter-spacing:.28em;color:var(--red);margin-bottom:6mm}
+.cover .cvttl{font-size:42pt;font-weight:700;line-height:1;letter-spacing:-.02em}
+.cover .cvby{font-style:italic;font-size:14pt;color:var(--mute);margin:4mm 0}
+.cover .cvrule{width:56px;height:2px;background:var(--red);margin:2mm 0 5mm}
+.cover .cvsub{font-style:italic;font-size:12pt;color:var(--body);max-width:120mm;line-height:1.6;margin-bottom:10mm}
+.cover .cvplan{width:150mm;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.cover .cvph{background:var(--ink);color:#fff;font:700 9pt/1 var(--sans);letter-spacing:.1em;padding:6px 10px;text-align:left;text-transform:uppercase}
+.cover .cvrow{display:flex;align-items:center;padding:5px 10px;border-bottom:1px solid var(--line);font-size:9pt;text-align:left}
+.cover .cvrow:last-child{border-bottom:0}
+.cover .cvrow.fin{background:var(--nvsoft)}
+.cover .cvu{width:16mm;font-weight:700;color:var(--red);flex:none}
+.cover .cvc{width:34mm;color:var(--mute);flex:none;font-size:8.5pt}
+.cover .cvl{flex:1}
+.cover .cvw{color:var(--navy);font-weight:700;flex:none}
+.cover .cvnote{margin-top:8mm;font-size:9pt;color:var(--mute);max-width:150mm;line-height:1.5}
+
+/* footer */
+.ft2{position:absolute;left:14mm;right:14mm;bottom:7mm;padding-top:2mm;border-top:1px solid var(--line);display:flex;justify-content:space-between;font-size:7.5pt;color:var(--faint)}
+.ft2 .r{font-family:var(--serif);font-style:italic}
+
+/* 미생성 경고면 */
+.warnpage{justify-content:center;align-items:center}
+.warnbox{border:2px solid var(--red);border-radius:8px;background:var(--redsoft);
+  padding:12mm 14mm;max-width:150mm;text-align:center;margin:auto}
+.warnbox.mini{padding:8mm 10mm;max-width:130mm}
+.warnbox .warnttl{font:700 15pt/1.2 var(--sans);color:var(--red);letter-spacing:.02em;margin-bottom:5mm}
+.warnbox .warnmsg{font-size:11pt;line-height:1.7;color:var(--body)}
+.warnbox .warnmsg b{color:var(--red)}
+
+
+/* ===== ANSWER KEY ===== */
+.page.ak{padding:12mm 14mm}
+.ak .akband{background:var(--ink);color:#fff;font:700 7.5pt/1 var(--mono);letter-spacing:.16em;display:inline-block;padding:6px 11px;border-radius:4px;text-transform:uppercase}
+.ak .akh{font-family:var(--serif);font-size:20pt;font-weight:700;margin:3mm 0 1mm}
+.ak .akh em{font-style:italic;color:var(--red)}
+.ak .aksub{font-family:var(--serif);font-style:italic;color:var(--mute);margin-bottom:3mm;font-size:10pt}
+.ak .aksec{border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-top:2.5mm}
+.ak .aksh{background:var(--ink);padding:5px 10px}
+.ak .aksh .akp{color:#fff;font:700 8.5pt/1 var(--sans)}
+.ak .akbody{padding:2.5mm 3mm}
+.ak .akline{font-size:9.5pt;line-height:1.7}
+.ak .akvoc{font-size:8.5pt;color:var(--mute);margin-top:1.5mm;line-height:1.5}
+.ak .aktbl{width:100%;border-collapse:collapse;font-size:9pt}
+.ak .aktbl td{padding:5px 9px;border-bottom:1px solid var(--line);vertical-align:top}
+.ak .aktbl tr:last-child td{border-bottom:0}
+.ak .akn{width:12mm;color:var(--mute);font-family:var(--mono);text-align:center;font-size:8pt}
+.ak .aka{width:14mm;text-align:center}
+.ak .akb{display:inline-block;width:18px;height:18px;line-height:18px;border-radius:50%;background:var(--red);color:#fff;font:700 9pt/18px var(--mono)}
+.ak .akw{line-height:1.5;color:var(--body)}
+.ak .akw b{color:var(--navy)}
+
+@media print{
+  body{background:#fff;padding:0}
+  .toolbar{display:none}
+  .page{box-shadow:none;margin:0;page-break-after:always;min-height:297mm}
+  .page:last-child{page-break-after:auto}
+  @page{size:A4;margin:0}
+
+  /* never let a single question / answer / box split across a page fold */
+  .qq,.wbank,.cw,.tqr,.opts,.frame,.noteorg,.sc2,.chosen,.wc,
+  .actwrap,.moves,.card,.script,.checks,.marked,.spinemap,.tscript,
+  .cvplan,.aksec,.aktbl tr,.scitem{
+    break-inside:avoid;
+    page-break-inside:avoid;
+  }
+  /* 라이팅 줄·서술형 답안 줄은 페이지 넘어 이어져도 된다 */
+  .ruled,.salines{ break-inside:auto; page-break-inside:auto; }
+  .salines .wl,.ruled .rl{ break-inside:avoid; page-break-inside:avoid; }
+  /* keep a section header attached to the content that follows it */
+  .band,.gband,.dir,.h1sm,.sub,.rh,.akband,.akh,.aksub{
+    break-after:avoid;
+    page-break-after:avoid;
+  }
+  /* 인쇄 시 유령 빈 페이지 방지 — 화면용 여백/그림자 제거 */
+  .page{margin:0 auto!important;box-shadow:none!important}
+
+  /* 밀도 조정 — 문항이 많은 면(어휘체크+독해 등)이 A4 한 장에 들어가도록 */
+  .band{margin:2.6mm 0 1.8mm;padding:5px 11px}
+  .band .bt{font-size:11pt}
+  .gband{margin:2.6mm 0 1.6mm}
+  .dir{padding-bottom:1.6mm;margin-bottom:1.6mm;font-size:8.6pt}
+  .wbank{padding:2.2mm;margin-bottom:2mm;gap:4px}
+  .wbank .wchip{padding:3px 9px}
+  .qlist .qq{padding:1.6mm 0}
+  .qlist.tight .qq{padding:1.3mm 0}
+  .qq .stem{font-size:9.4pt;line-height:1.38}
+  .qq .opts{margin:1mm 0 0 6mm}
+  .qq .opt{padding:0;line-height:1.3;font-size:9pt}
+  .actwrap{padding:2.6mm 3.5mm}
+  .cw{padding:1.8mm 0}
+  .ak .aktbl td{padding:3.5px 9px}
+  .ak .akline{line-height:1.55}
+  .ak .aksec{margin-top:2mm}
+  .ak .akvoc{margin-top:1mm}
+
+  /* 답지(정답·해설)면 강한 밀도 조정 — 해설이 긴 유닛도 한 장에 */
+  .ak .akband{padding:4px 9px;margin-bottom:1.6mm}
+  .ak .akh{margin:1.6mm 0 .4mm}
+  .ak .aksub{margin-bottom:1.4mm}
+  .ak .aksec{margin-top:1.4mm}
+  .ak .aksh{padding:3px 8px}
+  .ak .aktbl td{padding:2.4px 8px;font-size:8.4pt;line-height:1.34}
+  .ak .akline{line-height:1.42;font-size:8.7pt}
+  .ak .akvoc{margin-top:.8mm}
+  .ak .akb{width:15px;height:15px;line-height:15px;font-size:8pt}
+}
+@media (max-width:820px){
+  .page{width:100%;height:auto;min-height:0;padding:16px}
+  .ft2{position:static;margin-top:14px}
+  .cover .cvplan{width:100%}
+  .moves{flex-direction:column}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+
+/* ================= 첨삭 CARD ================= */
+.script{border:2px solid var(--ink);margin-bottom:14px}
+.script>b{display:block;background:var(--ink);color:#fff;padding:7px 10px;
+  font:700 8px/1.3 ui-monospace,monospace;letter-spacing:.14em}
+.script .sl{display:flex;border-bottom:1px solid var(--rule);align-items:stretch}
+.script .sl:last-child{border-bottom:0}
+.script .sl .k{width:32mm;flex:none;background:var(--fill);border-right:1px solid var(--rule);
+  padding:10px;font:700 8pt/1.4 ui-monospace,monospace;color:var(--accent)}
+.script .sl .v{flex:1;padding:10px 12px;font-size:11pt;line-height:1.55;font-weight:600}
+
+.checks.think .th{background:var(--accent);color:#fff;padding:6px 10px;
+  font:600 8pt/1.4 ui-monospace,monospace;letter-spacing:.04em}
+.checks.think{border-color:var(--accent)}
+
+details.ref{border:1px solid var(--rule);margin-top:12px}
+details.ref>summary{cursor:pointer;padding:8px 10px;background:var(--fill);
+  font:700 7.5px/1.4 ui-monospace,monospace;letter-spacing:.12em;color:var(--mute);list-style:none}
+details.ref>summary::-webkit-details-marker{display:none}
+details.ref>summary:before{content:"▸ ";color:var(--accent)}
+details.ref[open]>summary:before{content:"▾ "}
+details.ref>summary span{font-weight:400;letter-spacing:0;margin-left:6px;opacity:.7}
+details.ref>summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+details.ref>div{padding:12px 10px 0}
+details.ref>div:last-child{padding-bottom:12px}
+
+
+.spinemap{margin-bottom:12px}
+.spinemap>b{display:block;font:700 7.5px/1 ui-monospace,monospace;letter-spacing:.14em;color:var(--mute);margin-bottom:6px}
+.spinemap .sb{display:flex;border:1px solid var(--rule)}
+.spinemap .sb>div{flex:1;text-align:center;padding:6px 2px;border-right:1px solid var(--rule)}
+.spinemap .sb>div:last-child{border-right:0}
+.spinemap .sb b{display:block;font:700 7.5px/1.2 ui-monospace,monospace;letter-spacing:.06em}
+.spinemap .sb span{display:block;font:400 7.5pt/1 ui-monospace,monospace;margin-top:3px;opacity:.7}
+.spinemap .sb .f{background:var(--accent);color:#fff}
+.spinemap .sb .x{background:#FBEAEA;color:#9B2C2C}
+.spinemap .sb .n{background:var(--fill);color:var(--mute)}
+
+.marked{border:1px solid var(--rule);margin-bottom:12px}
+.marked>b{display:block;font:700 7.5px/1 ui-monospace,monospace;letter-spacing:.14em;color:var(--mute);
+  padding:8px 10px;border-bottom:1px solid var(--rule);background:var(--fill)}
+.marked .sr{display:flex;gap:8px;padding:7px 10px;border-bottom:1px solid var(--rule);align-items:flex-start}
+.marked .sr:last-child{border-bottom:0}
+.marked .sr.weak{background:#FDF8F0}
+.marked .sr.plot{background:#FBEAEA}
+.marked .sn{width:16px;flex:none;font:600 8pt/1.5 ui-monospace,monospace;color:var(--mute);text-align:right}
+.marked .sg{width:60px;flex:none;font:700 7px/1.6 ui-monospace,monospace;letter-spacing:.06em;
+  text-align:center;border:1px solid var(--rule);color:var(--accent);border-radius:1px;padding:1px 0}
+.marked .sg.PLOT,.marked .sg.OFF{color:#9B2C2C;border-color:#E4C4C4}
+.marked .st{flex:1;font-size:9.3pt;line-height:1.5}
+.marked .st em{display:block;font-style:normal;font-size:8.4pt;color:#9B2C2C;margin-top:3px}
+.plotwarn{padding:7px 10px;background:#9B2C2C;color:#fff;font-size:8.6pt;font-weight:600}
+
+
+.cards{margin-top:14px}
+.card{background:#fff;border:1px solid var(--rule);border-top:3px solid var(--accent);
+  padding:16px;margin-bottom:12px;page-break-inside:avoid}
+.card .ch{display:flex;align-items:baseline;gap:10px;border-bottom:1.5px solid var(--ink);
+  padding-bottom:8px;margin-bottom:12px}
+.card .ch .who{font:700 8.5px/1 ui-monospace,monospace;letter-spacing:.16em;color:var(--accent)}
+.card .ch .meta{font-size:8.6pt;color:var(--mute);margin-left:auto}
+.card .grade{font:700 30pt/1 ui-monospace,monospace;letter-spacing:-.02em}
+.card .grade small{display:block;font:600 7.5px/1 ui-monospace,monospace;letter-spacing:.18em;color:var(--mute);margin-top:4px}
+.g-P{color:var(--accent)} .g-D{color:#8A6D3B} .g-B{color:#9B2C2C}
+
+.tscript{border:1px solid var(--rule);background:var(--fill);padding:10px 12px;margin-bottom:12px;
+  font-size:9.4pt;line-height:1.75;color:var(--graphite);white-space:pre-wrap}
+.tscript b{display:block;font:700 7.5px/1 ui-monospace,monospace;letter-spacing:.14em;color:var(--mute);margin-bottom:6px}
+
+.checks{border:1px solid var(--rule);margin-bottom:12px}
+.checks .cr{display:flex;gap:10px;padding:8px 10px;border-bottom:1px solid var(--rule);align-items:flex-start}
+.checks .cr:last-child{border-bottom:0}
+.checks .mk{font:700 12pt/1.1 ui-monospace,monospace;width:14px;flex:none}
+.checks .mk.y{color:var(--accent)} .checks .mk.n{color:#9B2C2C}
+.checks .cn{width:52mm;flex:none;font-size:9.2pt;font-weight:600}
+.checks .cw{flex:1;font-size:9pt;color:var(--graphite);line-height:1.5}
+.checks .cw q{font-style:normal;color:var(--ink);background:#EFF3F5;padding:1px 4px}
+
+.act-rows{border:1px solid var(--ink)}
+.act-rows .ar{display:flex;border-bottom:1px solid var(--rule)}
+.act-rows .ar:last-child{border-bottom:0}
+.act-rows .al{width:34mm;flex:none;background:var(--fill);border-right:1px solid var(--rule);
+  padding:8px 10px;font:700 7.5px/1.4 ui-monospace,monospace;letter-spacing:.1em;color:var(--accent)}
+.act-rows .av{flex:1;padding:8px 10px;font-size:9.4pt;line-height:1.55}
+.act-rows .ar.say .av{font-weight:600;color:var(--ink)}
+.act-rows .ar.gr .av{font-size:8.6pt;color:var(--mute)}
+
+.thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.thumbs img{height:64px;border:1px solid var(--rule);border-radius:1px}
+
+/* ================= APP CHROME ================= */
+.app{max-width:210mm;margin:0 auto 24px}
+.topbar{position:sticky;top:0;z-index:60;background:var(--ink);color:#fff;
+  padding:12px 14px;border-radius:2px;display:flex;gap:8px;align-items:center;margin-bottom:14px}
+.topbar h1{font:600 11px/1 ui-monospace,monospace;letter-spacing:.22em;text-transform:uppercase;margin-right:auto}
+.topbar button,.panel button{font:600 11px/1 ui-monospace,monospace;letter-spacing:.1em;
+  background:transparent;color:#fff;border:1px solid #6b6862;padding:9px 12px;border-radius:2px;cursor:pointer}
+.topbar button:hover{background:#fff;color:var(--ink)}
+.topbar button[aria-pressed="true"]{background:#fff;color:var(--ink);border-color:#fff}
+.topbar button:disabled{opacity:.4;cursor:not-allowed}
+.topbar button:focus-visible,.panel button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.panel{background:#fff;border:1px solid var(--rule);border-top:2px solid var(--accent);
+  padding:16px;margin-bottom:14px}
+.panel h2{font:700 8.5px/1 ui-monospace,monospace;letter-spacing:.18em;color:var(--accent);margin-bottom:10px}
+.panel .hint{font-size:9pt;color:var(--mute);margin-bottom:12px;line-height:1.5}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}
+.f{display:flex;flex-direction:column;gap:4px}
+.f label{font:600 8px/1 ui-monospace,monospace;letter-spacing:.12em;color:var(--mute)}
+.f input,.f select,.f textarea{border:1px solid var(--rule);padding:8px 9px;font-size:10pt;
+  font-family:inherit;background:#fff;color:var(--ink);border-radius:1px}
+.f textarea{min-height:70px;resize:vertical;font-size:9pt;line-height:1.5}
+.c12{grid-column:span 12}.c8{grid-column:span 8}.c6{grid-column:span 6}.c4{grid-column:span 4}.c3{grid-column:span 3}
+.panel .act{display:flex;gap:8px;margin-top:12px;align-items:center}
+.panel .act button{background:var(--ink);border-color:var(--ink)}
+.panel .f button{background:var(--ink);border-color:var(--ink);color:#fff;padding:9px 10px}
+.panel .f button.ghost{background:transparent;color:var(--ink);border-color:var(--rule)}
+.panel .f button:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+.panel .act button:hover{background:var(--accent);border-color:var(--accent)}
+.panel .act button.ghost{background:transparent;color:var(--ink);border-color:var(--rule)}
+.panel .act button.ghost:hover{background:var(--fill);color:var(--ink)}
+.panel .act .sp{margin-left:auto;font-size:9pt;color:var(--mute)}
+
+.log{border:1px solid var(--rule);background:var(--fill);padding:10px 12px;margin-top:12px;
+  font:400 8.5pt/1.7 ui-monospace,monospace;color:var(--graphite);max-height:190px;overflow:auto}
+.log .ok{color:var(--accent);font-weight:700}
+.log .er{color:#9B2C2C;font-weight:700}
+.log:empty{display:none}
+
+.bar{height:3px;background:var(--rule);margin-top:10px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+
+.lib{display:flex;flex-wrap:wrap;gap:6px}
+.lib .chip{border:1px solid var(--rule);background:#fff;color:var(--ink);padding:7px 10px;border-radius:1px;
+  font-size:9pt;cursor:pointer;display:flex;gap:8px;align-items:center}
+.lib .chip:hover{border-color:var(--accent)}
+.lib .chip[aria-current="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+.lib .chip .x{color:var(--mute);font-weight:700}
+.lib .chip[aria-current="true"] .x{color:#cfd8dd}
+.lib .empty{font-size:9pt;color:var(--mute)}
+/* ---- 강사 지도 대본 ---- */
+.sc-page{padding:14mm 12mm;font-size:10.5pt;line-height:1.55;color:var(--ink)}
+.sc-cover{border-bottom:2px solid var(--ink);padding-bottom:6mm;margin-bottom:6mm}
+.sc-brand{font:700 9px/1 ui-monospace,monospace;letter-spacing:.28em;color:var(--accent)}
+.sc-cover h2{font-size:20pt;margin:3mm 0 1mm;font-weight:800}
+.sc-sub{color:var(--mute);font-size:10pt}
+.sc-h{font-size:12pt;font-weight:800;border-bottom:1.5px solid var(--ink);padding-bottom:2mm;margin-bottom:3mm}
+.sc-logic{color:var(--accent);font-weight:700}
+.sc-goal{background:var(--fill);padding:2mm 3mm;border-radius:2px;margin-bottom:3mm;font-size:10pt}
+.sc-block{margin-bottom:4mm}
+.sc-t{font-weight:800;color:var(--accent);margin-bottom:1.5mm;font-size:10.5pt}
+.sc-fact{margin-bottom:1.2mm}
+.sc-ans{background:var(--fill);padding:1.5mm 3mm;border-left:3px solid var(--accent);margin-top:1.5mm;font-size:9.5pt}
+.sc-q{border:1px solid var(--rule);border-radius:3px;padding:2mm 3mm;margin-bottom:2mm}
+.sc-ql{font-weight:700;margin-bottom:1mm}
+.sc-r{font-size:9.5pt;margin:.6mm 0}
+.sc-r span{display:inline-block;min-width:130px;color:var(--mute);font-weight:700}
+.sc-fail,.sc-fail span{color:#9B2C2C}
+.sc-note{background:#FFF8E1;border:1px solid #F0E0A0;border-radius:3px;padding:2mm 3mm;font-size:9pt;color:var(--graphite)}
+.sc-ov{white-space:normal;line-height:1.7}
+.sc-warn{background:#FDECEC;border:1px solid #E7B0B0;color:#9B2C2C;padding:2mm 3mm;border-radius:3px;margin-bottom:3mm;font-weight:700}
+.sc-loading{padding:20mm;text-align:center;color:var(--mute)}
+.sc-en{color:#1b4d3e}
+.sc-kr,.sc-tag-en{display:inline-block;font-size:8pt;font-weight:700;padding:0 5px;border-radius:2px;margin-right:5px;vertical-align:1px}
+.sc-kr{background:#EAF2EF;color:#2F4858}
+.sc-tag-en{background:#E4F0E8;color:#1b6b45}
+.sc-p{margin:1.5mm 0}
+.sc-en-list .sc-en{border:1px solid var(--rule);border-radius:3px;padding:1.2mm 3mm;margin-bottom:1mm;font-weight:600}
+.sc-en-note{font-size:9pt;color:var(--mute);margin-top:1.5mm}
+
+.sheet{margin-top:18px}
+.sheet:empty:after{content:"책을 선택하거나 새로 생성하면 워크시트가 여기에 나타납니다.";
+  display:block;text-align:center;color:var(--mute);font-size:9.5pt;padding:60px 0;border:1px dashed var(--rule);background:#fff}
+
+@media print{
+  .topbar,.panel{display:none!important}
+  .app{max-width:none;margin:0}
+  .sheet{margin:0}
+  .cards:not(:empty) ~ .sheet{display:none}
+  .card{border-top-width:2px}
+  details.ref>div{display:block!important}
+  details.ref>summary{display:none}
+}
+@media (max-width:860px){
+  .c8,.c6,.c4,.c3{grid-column:span 12}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="topbar">
+  <h1>EPL Logic Writing Generator · Online</h1>
+  <button id="btnTeacher" aria-pressed="false">교사 진행면 포함</button>
+  <button id="btnPrint" disabled>인쇄</button>
+</div>
+
+<!-- ========== 0. 연결 ========== -->
+<div class="panel" id="connPanel" style="display:none">
+  <h2>00 · 연결 — 한 번만 설정합니다</h2>
+  <p class="hint">Cloudflare Worker 프록시 주소를 넣으십시오. 이 브라우저에 저장되며 다시 넣을 필요가 없습니다.
+    주소가 없으면 <b>책 생성과 사진 첨삭이 동작하지 않습니다.</b> 인쇄·JSON 불러오기는 주소 없이도 됩니다.</p>
+  <div class="grid">
+    <div class="f c8"><label>WORKER ENDPOINT</label>
+      <input id="fEp" placeholder="https://epl-claude-proxy.—.workers.dev/v1/messages"></div>
+    <div class="f c4"><label>&nbsp;</label>
+      <div style="display:flex;gap:6px">
+        <button id="btnEpSave" style="flex:1">저장</button>
+        <button id="btnEpTest" class="ghost" style="flex:1">연결 테스트</button>
+      </div></div>
+  </div>
+  <div class="log" id="epLog"></div>
+</div>
+
+<!-- ========== 1. 책 입력 ========== -->
+<div class="panel">
+  <h2>01 · NEW BOOK</h2>
+  <p class="hint">책 제목만 넣으면 6개 유닛이 생성됩니다. 논리 구조·분량 사다리·페이지 형식은 고정이며, AI는 <b>그 책의 내용만</b> 채웁니다.</p>
+  <div class="grid">
+    <div class="f c8"><label>BOOK TITLE</label><input id="fTitle" placeholder="예: Holes"></div>
+    <div class="f c4"><label>AUTHOR</label><input id="fAuthor" placeholder="예: Louis Sachar"></div>
+    <div class="f c4"><label>LEVEL</label>
+      <select id="fLevel">
+        <option value="upper elementary (AR 4.0-5.5)">초등 고학년 · AR 4.0–5.5</option>
+        <option value="middle school (AR 5.5-7.0)" selected>중등 · AR 5.5–7.0</option>
+        <option value="advanced middle school (AR 7.0+)">중등 상위 · AR 7.0+</option>
+      </select></div>
+    <div class="f c8"><label>NOTES · 선택 입력</label>
+      <input id="fNotes" placeholder="예: 우리 반은 Ch.1-10까지만 읽음 / 인물 중심으로">
+    </div>
+  </div>
+  <div class="act">
+    <button id="btnGen">6개 유닛 생성</button>
+    <button id="btnGiver" class="ghost">The Giver 기준본 열기</button>
+    <button id="btnVerify" class="ghost">🔎 책 사실 점검</button>
+    <span class="sp" id="cost"></span>
+  </div>
+  <div class="bar"><i id="bar"></i></div>
+  <div class="log" id="log"></div>
+</div>
+
+<!-- ========== 2. 라이브러리 ========== -->
+<div class="panel">
+  <h2>02 · BOOK LIBRARY</h2>
+  <p class="hint">생성한 책은 이 브라우저에 저장됩니다. 한 번 만들면 다시 생성하지 않습니다. JSON으로 내보내 GitHub 저장소에 올리면 강사들이 공유합니다.</p>
+  <div class="lib" id="lib"></div>
+  <div class="act">
+    <button id="btnExport" class="ghost">선택한 책 JSON 내보내기</button>
+    <button id="btnImport" class="ghost">JSON 불러오기</button>
+    <button id="btnEdit" class="ghost">내용 직접 수정</button>
+    <button id="btnScript" class="ghost">📖 강사 지도 대본</button>
+    <input type="file" id="fileIn" accept=".json" hidden>
+  </div>
+</div>
+
+<!-- ========== 3. 채점 ========== -->
+<div class="panel">
+  <h2>03 · 첨삭 — 학생 리포트 사진 업로드</h2>
+  <p class="hint">강사가 학생의 <b>C 라이팅면</b>을 사진으로 찍어 올리면 첨삭합니다.
+    등급은 <b>사고력 3축</b>에서만 나옵니다 — 주장이 반대할 수 있는가 · 이유가 한 단계 넘었는가 · 근거가 그 이유를 지지하는가.
+    <b>문법은 등급에 들어가지 않습니다.</b> 문법이 완벽해도 생각이 얕으면 B, 문법이 엉망이어도 생각이 내려갔으면 P입니다.
+    카드 맨 위 <b>강사 대본 3줄</b>만 읽으면 됩니다. 강사가 영어로 판단할 것은 없습니다.</p>
+  <div class="grid">
+    <div class="f c4"><label>BOOK</label><select id="gBook"></select></div>
+    <div class="f c3"><label>UNIT</label><select id="gUnit">
+      <option value="0">01 · Opinion + Reason</option>
+      <option value="1">02 · Cause &amp; Effect</option>
+      <option value="2">03 · Compare &amp; Contrast</option>
+      <option value="3">04 · Claim + Evidence</option>
+      <option value="4">05 · Counterargument</option>
+      <option value="5">06 · Final Essay</option>
+    </select></div>
+    <div class="f c3"><label>학생 이름 · 선택</label><input id="gName" placeholder="비워도 됩니다"></div>
+    <div class="f c12"><label>리포트 사진 · 여러 장 가능 (한 학생 기준)</label>
+      <input type="file" id="gFiles" accept="image/*" multiple></div>
+  </div>
+  <div class="thumbs" id="gThumbs"></div>
+  <div class="act">
+    <button id="btnGrade">첨삭</button>
+    <button id="btnClearCards" class="ghost">첨삭 카드 지우기</button>
+    <span class="sp" id="gStat"></span>
+  </div>
+  <div class="log" id="gLog"></div>
+</div>
+
+<div class="cards" id="cards"></div>
+
+<!-- ========== 4. 수동 편집 ========== -->
+<div class="panel" id="editPanel" hidden>
+  <h2>04 · EDIT PACK JSON</h2>
+  <p class="hint">AI가 만든 문항이 마음에 안 들면 여기서 직접 고칩니다. 저장하면 즉시 워크시트에 반영됩니다.</p>
+  <div class="f c12"><textarea id="editJson" style="min-height:260px"></textarea></div>
+  <div class="act">
+    <button id="btnSaveEdit">저장 후 다시 렌더</button>
+    <button id="btnCloseEdit" class="ghost">닫기</button>
+  </div>
+</div>
+
+<div class="sheet" id="sheet"></div>
+</div>
+
+<script>
+/* ===================================================================
+   EPL LOGIC WRITING GENERATOR
+   구조는 코드가 소유하고, AI는 콘텐츠만 채운다.
+   =================================================================== */
+
+const EP_KEY = "epl_endpoint";
+const MODEL   = "claude-sonnet-5";
+
+function getEndpoint(){
+  const v = (localStorage.getItem(EP_KEY) || "").trim();
+  if(!v) throw new Error("프록시 주소가 없습니다. 맨 위 [00 · 연결]에 워커 주소를 넣고 저장하십시오.");
+  return v;
+}
+
+/* ---------- 고정 자산: 이 부분은 절대 AI가 만들지 않는다 ---------- */
+const SPINE = ["OPINION","REASON","EVIDENCE","EXPLAIN","COUNTER","CONCLUDE"];
+
+const MOVES = {
+  DEFINE:      "That word — what exactly does it mean here?",
+  "TRADE-OFF": "What was gained, and what was given up for it?",
+  FLIP:        "Make the other side sound strong, then answer it.",
+  PUSH:        "If this were true for everyone, what would happen?",
+  HOME:        "Where does this same thing happen in my life?"
+};
+
+const LADDER = [
+  { no:"01", logic:"Opinion + Reason",
+    sub:"논리 목표 — 주장(Opinion)을 세우고 그 뒤에 이유(Reason)를 붙인다.",
+    on:[0], words:80, moves:["DEFINE","TRADE-OFF","HOME"],
+    thesis:"I think <span class='blank lg'></span> because <span class='blank lg'></span>",
+    connectors:null,
+    rubric:["주장(I think ...)이 한 문장으로 분명하게 드러난다",
+            "because 뒤가 완결된 절이다 — 단어 하나나 명사구로 끝내지 않았다",
+            "이유가 주장을 반복하지 않고 새 정보를 담고 있다"] },
+  { no:"02", logic:"Cause & Effect",
+    sub:"논리 목표 — 원인과 결과를 구분해 연결한다.",
+    on:[1], words:100, moves:["DEFINE","PUSH","HOME"],
+    thesis:"<span class='blank lg'></span> because <span class='blank lg'></span> As a result, <span class='blank lg'></span>",
+    connectors:["<b>because</b> &nbsp;·&nbsp; <b>since</b> &nbsp;·&nbsp; <b>the reason is that</b>",
+                "<b>so</b> &nbsp;·&nbsp; <b>therefore</b> &nbsp;·&nbsp; <b>as a result</b>"],
+    rubric:["원인 문장과 결과 문장을 구분해서 썼다",
+            "연결어를 두 개 이상 정확한 위치에 사용했다",
+            "결과가 원인에서 실제로 따라 나온다 (비약이 없다)"] },
+  { no:"03", logic:"Compare & Contrast",
+    sub:"논리 목표 — 두 대상을 같은 기준으로 비교·대조하고 의미를 정리한다.",
+    on:[2], words:120, moves:["TRADE-OFF","PUSH","HOME"],
+    thesis:"<span class='blank lg'></span> However, <span class='blank lg'></span> This shows that <span class='blank lg'></span>",
+    connectors:null,
+    rubric:["같은 항목끼리 비교했다 (사실은 사실끼리, 감정은 감정끼리)",
+            "However / Unlike를 문장 앞에서 정확히 사용했다",
+            "비교로 끝내지 않고 마지막에 의미를 한 문장으로 정리했다"] },
+  { no:"04", logic:"Claim + Evidence + Explain",
+    sub:"논리 목표 — 주장에 책 속 근거를 붙이고, 그 근거가 무엇을 증명하는지 설명한다.",
+    on:[2,3], words:140, moves:["DEFINE","FLIP","HOME"],
+    thesis:"I claim that <span class='blank lg'></span> because <span class='blank lg'></span>",
+    connectors:null,
+    rubric:["근거를 상상이 아니라 책 속 사건에서 가져왔다",
+            "근거 뒤에 This shows that 설명 문장을 반드시 붙였다",
+            "Therefore 문장이 앞의 주장과 같은 방향이다"] },
+  { no:"05", logic:"Counterargument + Rebuttal",
+    sub:"논리 목표 — 반대 의견을 강하게 세운 뒤, 그것을 다시 반박한다.",
+    on:[4,5], words:160, moves:["FLIP","PUSH","HOME"],
+    thesis:"I argue that <span class='blank lg'></span> Some may say <span class='blank lg'></span> However, <span class='blank lg'></span>",
+    connectors:null,
+    rubric:["반대 의견을 실제로 설득력 있게 한 문장으로 썼다",
+            "However 뒤에서 반대 의견을 무시하지 않고 반박했다",
+            "마지막 문장이 첫 문장의 주장과 일치한다"] }
+];
+
+const FINAL_RUBRIC = [
+  "Thesis — 주제문이 한 문장으로 명확하고 논쟁 가능한가",
+  "Evidence — 근거가 책 속 사건에서 나왔는가",
+  "Explanation — 근거의 의미를 설명했는가 (This shows that ...)",
+  "Counterargument — 반론을 강하게 세우고 재반박했는가",
+  "Position — 입장이 5문단 내내 하나로 유지되는가",
+  "Focus — 줄거리 요약이 아니라 질문에 답했는가"
+];
+
+/* ---------- 프롬프트 ---------- */
+function unitPrompt(meta, spec) {
+  const tags =
+    spec.no==="01" ? "OPINION, REASON, OPINION, REASON" :
+    spec.no==="02" ? "CAUSE, EFFECT, CAUSE, EFFECT" :
+    spec.no==="03" ? "SIDE A, CONTRAST, CONTRAST, SO WHAT" :
+    spec.no==="04" ? "CLAIM, EVIDENCE, EXPLAIN, THEREFORE" :
+                     "ARGUE, CONCEDE, REBUT, CONCLUDE";
+  return `You are writing one unit of a commercial-quality English reading workbook used at a Korean academy.
+It follows a printed workbook structure: a background box, vocabulary with a Korean gloss, a word-bank check,
+reading comprehension (multiple choice + short answer), a thinking activity, and finally a LOGIC WRITING task.
+This unit's writing logic target is: ${spec.logic}.
+
+Book: "${meta.title}" by ${meta.author}. Student level: ${meta.level}.
+${meta.notes ? "Teacher note: " + meta.notes : ""}
+This is UNIT ${spec.no} of 6; units move through the book in order. Pick a chapter range fitting this position.
+
+HARD RULES
+- NEVER quote any sentence, phrase, or wording from the book. Retell every event in your own words.
+- Everything is ENGLISH except the Korean-only fields listed below (facts_ans stays English).
+- Vocabulary: EXACTLY 12 real, useful words a reader meets in this chapter range (mix nouns, verbs, adjectives). "def" = plain English 4-7 words.
+  "ko" = short natural Korean gloss (2-4 words). "pos" = one of noun/verb/adj/adv.
+- "background" = 2-3 sentence English recap of THIS chapter range in your own words. No spoilers beyond it.
+- Comprehension MC: exactly 5 items, 4 options each, one correct letter. Mix literal, inference, author-intent.
+  Wrong options must be plausible, not silly. "badge" is "infer" or "intent" where it fits, else null.
+- THINK questions have NO single correct answer; a student defends either side. Never answerable by plot summary.
+- Short-answer ("facts"): EXACTLY 4 open questions, each needing 2-4 full sentences to answer (explain, or support with events from THIS chapter range). Never one-word or yes/no. "sa_key" gives 4 Korean grading notes, one per question.
+- Sentence frames are scaffolds with blanks matching the logic target exactly.
+- Model answers are what a strong ${meta.level} student would actually write, not adult prose.
+
+KOREAN-ONLY FIELDS (Korean; everything else English): vocab "ko", mc_why, sa_key, act.note, think_key.
+- think_key: never give a "correct" answer. Give both defensible sides, the P condition, and the shallow answer + exact re-ask question.
+- Grade on logic only; never mention grammar/spelling/tense in any Korean field.
+
+Return ONLY raw JSON. No markdown, no backticks, no preamble.
+{
+ "ch": "CHAPTERS 1-5",
+ "title": "3-4 word thematic title",
+ "background": "2-3 sentence English recap of this chapter range",
+ "vocab": [{"w":"word","pos":"adj","ko":"짧은 한글 뜻","def":"4-7 word English definition"}],
+ "check": [["cloze sentence with ___ for the blank","answerword"]],
+ "mc": [{"q":"question","opts":["A","B","C","D"],"ans":"A","badge":"infer"}],
+ "mc_why": ["1번 정답 해설 한 줄(한글)"],
+ "facts": ["open short-answer question 1 (needs 2-4 sentences)","question 2","question 3","question 4"],
+ "sa_key": ["1번 채점 기준 한 줄(한글)","2번(한글)","3번(한글)","4번(한글)"],
+ "frame": [["TAG","English sentence frame with <span class='blank lg'></span> for each blank"]],
+ "frame_ans": "model answer, may use <br> once",
+ "act": {"title":"activity title","hint":"short english hint","intro":"one english line","items":[["situation","OPT1","OPT2"]],"ans":"1) OPT · 2) OPT · 3) OPT · 4) OPT","note":"토론용 한 줄(한글)"},
+ "think": [["INTERPRET","q"],["JUDGE","q"],["APPLY","q"],["SUPPOSE","q"]],
+ "think_key": [{"both":"A쪽 — 이유. ｜ B쪽 — 이유.","p":"P를 주는 조건 한 줄","fail":"~로 끝난다 → 되물어라: \"질문\""}]
+}
+
+EXACT COUNTS: vocab 12, check 6 (answers from 6 of the 12 vocab words), mc 5, mc_why 5, facts 4, sa_key 4, frame 4, act.items 4, think 4, think_key 4.
+
+The activity is "circle the better option": each item is a situation plus two English options to choose between. "ans" lists the intended pick per item, e.g. "1) frightened · 2) distracted".
+
+THINK types — INTERPRET: why the text works this way. JUDGE: right or wrong, defended. APPLY: transfers the book's problem to the student's life. SUPPOSE: change one condition, ask what follows.
+
+Frame TAGs for this unit: ${tags}`;
+}
+
+function finalPrompt(meta) {
+  return `Book: "${meta.title}" by ${meta.author}. Student level: ${meta.level}.
+
+Write the FINAL argument essay task for a 6-unit logic writing worksheet.
+Give THREE essay questions. Each must be a real dilemma from this book that thoughtful readers disagree about.
+Never quote the book. English only. No Korean.
+Each question is 2-3 sentences: the question, then the tension that makes it hard.
+
+Return ONLY raw JSON:
+{
+ "prompts": [["A","question text"],["B","question text"],["C","question text"]],
+ "thesis_ans": "A - one model thesis sentence.<br>C - one model thesis sentence."
+}`;
+}
+
+/* ---------- API ---------- */
+/* 유닛 스키마 검증 — 부족하면 던져서 재생성을 유도 */
+function validateUnit(u, no){
+  const need = (c,n,name)=>{ if(!Array.isArray(c)||c.length!==n) throw new Error(`UNIT ${no} ${name} ${n}개 필요(받음 ${c?c.length:0})`); };
+  if(!u||typeof u!=="object") throw new Error(`UNIT ${no} 객체가 아님`);
+  const atleast=(c,n,name)=>{ if(!Array.isArray(c)||c.length<n) throw new Error(`UNIT ${no} ${name} ${n}개 이상 필요(받음 ${c?c.length:0})`); };
+  atleast(u.vocab,12,"vocab"); need(u.check,6,"check"); need(u.mc,5,"mc");
+  need(u.frame,4,"frame"); need(u.think,4,"think"); need(u.think_key,4,"think_key");
+  atleast(u.facts,4,"facts"); atleast(u.sa_key,4,"sa_key");
+  if(!u.act || !Array.isArray(u.act.items) || u.act.items.length!==4) throw new Error(`UNIT ${no} activity 4개 필요`);
+  if(!u.background) throw new Error(`UNIT ${no} background 없음`);
+}
+
+/* 유닛/파이널 완성 여부 — 빈 유닛을 조용히 인쇄하는 것을 막는다 */
+function unitComplete(u){
+  if(!u || typeof u!=="object") return false;
+  const ok=(c,n)=>Array.isArray(c)&&c.length===n;
+  return (Array.isArray(u.vocab)&&u.vocab.length>=8)&&ok(u.check,6)&&ok(u.mc,5)&&ok(u.frame,4)&&ok(u.think,4)
+    &&u.act&&Array.isArray(u.act.items)&&u.act.items.length===4&&!!u.background;
+}
+function finalComplete(f){ return !!(f && Array.isArray(f.prompts) && f.prompts.length); }
+
+let __EPL_S=null, __EPL_SR=false;
+async function eplSample(){
+  if(__EPL_SR) return __EPL_S;
+  try{ if(window.claude && claude.use) __EPL_S = await claude.use("sample"); }catch(e){ __EPL_S=null; }
+  __EPL_SR=true; return __EPL_S;
+}
+function eplB64ToBlob(b64, mime){
+  const bin=atob(b64); const arr=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+  return new Blob([arr], {type:mime||"image/png"});
+}
+/* 하이브리드: 아티팩트면 sample, GitHub/로컬이면 Cloudflare 워커 */
+const EPL_WORKER = "https://epl-claude-proxy.ahyoungkim0802.workers.dev/v1/messages";
+const EPL_WMODEL = "claude-sonnet-5";
+async function eplAskText(prompt, opts){
+  opts = opts||{};
+  const imgs = opts.images||null;
+  const s = await eplSample();
+  if(s){
+    const o = { modelTier: opts.modelTier||"complex", cache:false };
+    if(imgs && imgs.length){
+      const lim = await (s.limits? s.limits().catch(()=>({images:false})) : Promise.resolve({images:false}));
+      if(!lim.images) throw new Error("이미지 첨삭이 지원되지 않습니다.");
+      o.images = imgs.map(d=>eplB64ToBlob(d.b64, d.mime));
+    }
+    let out;
+    try{ out = await s(prompt, o); }
+    catch(e){
+      if(e&&e.code==="rate_limited") throw new Error("요청이 많습니다 — 잠시 후 다시 시도하십시오.");
+      if(e&&e.code==="not_granted") throw new Error("Claude 사용 허용이 필요합니다 — 상단 ‘허용’을 눌러주십시오.");
+      throw new Error((e&&e.message)||String(e));
+    }
+    return out.text||"";
+  }
+  const content = (imgs && imgs.length)
+    ? imgs.map(d=>({type:"image",source:{type:"base64",media_type:d.mime,data:d.b64}})).concat([{type:"text",text:prompt}])
+    : prompt;
+  let res;
+  try{
+    res = await fetch(EPL_WORKER, {method:"POST",headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ model:EPL_WMODEL, max_tokens:12000, messages:[{role:"user",content}] })});
+  }catch(e){ throw new Error("서버 연결 실패 — 인터넷 또는 워커 상태를 확인하십시오."); }
+  if(!res.ok){
+    const t = await res.text().catch(()=>"");
+    if(res.status===403) throw new Error("403 — 워커 접근 거부. 워커 CORS를 확인하십시오.");
+    if(res.status===401) throw new Error("401 — 워커에 API 키가 없습니다.");
+    if(res.status===429) throw new Error("429 — 사용 한도를 넘었습니다.");
+    throw new Error("API " + res.status + " — " + t.slice(0,120));
+  }
+  const data = await res.json();
+  return (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+}
+async function callClaude(prompt, log) {
+  const txt = await eplAskText(prompt, { modelTier:"complex" });
+  return parseModelJSON(txt);
+}
+
+/* LLM이 뱉은 텍스트에서 JSON을 최대한 견고하게 뽑아낸다.
+   1) 코드펜스 제거 2) 첫 { 부터 균형 잡힌 } 까지 정확히 추출(문자열 내 중괄호 무시)
+   3) 흔한 파손 복구(후행 쉼표, 문자열 안 실제 줄바꿈/탭) 후 재시도 */
+function parseModelJSON(txt){
+  let clean = String(txt||"").replace(/```json|```/g,"").trim();
+  const start = clean.indexOf("{");
+  if(start<0) throw new Error("JSON 시작 { 을 찾지 못했습니다. 모델이 JSON을 안 줬습니다.");
+
+  // 문자열 리터럴을 존중하며 균형 잡힌 최상위 객체를 찾는다
+  let depth=0, inStr=false, esc=false, end=-1;
+  for(let i=start;i<clean.length;i++){
+    const c=clean[i];
+    if(inStr){
+      if(esc){ esc=false; }
+      else if(c==="\\"){ esc=true; }
+      else if(c==='"'){ inStr=false; }
+      continue;
+    }
+    if(c==='"'){ inStr=true; }
+    else if(c==="{"){ depth++; }
+    else if(c==="}"){ depth--; if(depth===0){ end=i; break; } }
+  }
+  let body = end>=0 ? clean.slice(start, end+1) : clean.slice(start);
+
+  const attempts = [
+    body,
+    // 후행 쉼표 제거: ,] ,}
+    body.replace(/,\s*([}\]])/g, "$1"),
+    // 문자열 안의 실제 개행/탭을 이스케이프(모델이 raw 줄바꿈을 넣는 흔한 실패)
+    repairNewlinesInStrings(body).replace(/,\s*([}\]])/g, "$1"),
+  ];
+  let lastErr;
+  for(const a of attempts){
+    try{ return JSON.parse(a); }catch(e){ lastErr=e; }
+  }
+  // 마지막: 잘린 JSON이면 열린 배열/객체를 닫아 본다
+  try{ return JSON.parse(closeTruncated(attempts[2])); }catch(e){ lastErr=e; }
+  throw new Error("JSON 파싱 실패 — " + (lastErr&&lastErr.message||"") );
+}
+
+function repairNewlinesInStrings(s){
+  let out="", inStr=false, esc=false;
+  for(let i=0;i<s.length;i++){
+    const c=s[i];
+    if(inStr){
+      if(esc){ out+=c; esc=false; continue; }
+      if(c==="\\"){ out+=c; esc=true; continue; }
+      if(c==='"'){ out+=c; inStr=false; continue; }
+      if(c==="\n"){ out+="\\n"; continue; }
+      if(c==="\r"){ out+="\\r"; continue; }
+      if(c==="\t"){ out+="\\t"; continue; }
+      out+=c; continue;
+    }
+    if(c==='"'){ inStr=true; }
+    out+=c;
+  }
+  return out;
+}
+
+function closeTruncated(s){
+  // 문자열 밖 스택으로 열린 괄호를 닫는다
+  let inStr=false, esc=false; const stack=[];
+  for(let i=0;i<s.length;i++){
+    const c=s[i];
+    if(inStr){
+      if(esc){esc=false;} else if(c==="\\"){esc=true;} else if(c==='"'){inStr=false;}
+      continue;
+    }
+    if(c==='"') inStr=true;
+    else if(c==="{"||c==="[") stack.push(c);
+    else if(c==="}"||c==="]") stack.pop();
+  }
+  let tail = s.replace(/,\s*$/,"");
+  if(inStr) tail += '"';
+  for(let i=stack.length-1;i>=0;i--) tail += stack[i]==="{" ? "}" : "]";
+  return tail.replace(/,\s*([}\]])/g,"$1");
+}
+
+
+/* ---------- 렌더러 (A4 한 장 고정 · 판매 워크북 밀도) ---------- */
+const esc = s => String(s==null?"":s).replace(/&(?!nbsp;|amp;|lt;|gt;)/g,"&amp;");
+const rh = (day, ch) => `<div class="rh"><span class="rday">Day ${day}</span>`
+  +`<span class="rcr">${esc(ch||"")}</span>`
+  +`<span class="rnd">NAME __________ · DATE ________</span></div>`;
+const ft2 = (right) => `<div class="ft2"><span>EPL · Logic Reading &amp; Writing</span><span class="r">${esc(right)}</span></div>`;
+const spine = on => `<div class="spine">${SPINE.map((s,i)=>`<div class="${on.includes(i)?'on':''}">${s}</div>`).join("")}</div>`;
+const wlines = n => Array.from({length:n},()=>'<div class="wl"></div>').join("");
+const band = (n,t,meta) => `<div class="band"><span class="bn">${n}</span><span class="bt">${t}</span><span class="bmeta">${meta||""}</span></div>`;
+const gband = (tag,t,hint) => `<div class="gband"><span class="gtag">${tag}</span><span class="gt">${t}</span><span class="ghint">${hint||""}</span></div>`;
+const BADGE = {infer:["INFERENCE","bi"],intent:["AUTHOR'S INTENT","ba"]};
+const badge = b => (b&&BADGE[b])?` <span class="badge ${BADGE[b][1]}">${BADGE[b][0]}</span>`:"";
+
+/* PAGE 1 — 배경 + 어휘 */
+function pageIntro(pack,u,spec){
+  const t = (u.title||spec.logic||"").trim();
+  const vrows = (u.vocab||[]).map(v=>{
+    const w=v.w||v[0]||"", pos=v.pos||"", ko=v.ko||"", def=v.def||v[1]||"";
+    return `<tr><td class="vw">${esc(w)}</td><td class="vp">${esc(pos)}</td><td class="vk">${esc(ko)}</td><td class="vd">${esc(def)}</td></tr>`;
+  }).join("");
+  return `<section class="page">${rh(spec.no,u.ch)}
+    <div class="h1">Unit ${spec.no} · <em>${esc(t)}</em></div>
+    <div class="sub">${esc(spec.logic)}</div>
+    ${spine(spec.on)}
+    <div class="bgbox"><div class="bglbl">Background</div><p>${esc(u.background||"")}</p></div>
+    ${band("1","Key Vocabulary",((u.vocab||[]).length)+" WORDS")}
+    <table class="vt"><thead><tr><th style="width:22%">WORD</th><th style="width:8%">POS</th><th style="width:20%">뜻</th><th>DEFINITION</th></tr></thead><tbody>${vrows}</tbody></table>
+    ${ft2("Unit "+spec.no+" · A")}</section>`;
+}
+
+/* PAGE 2 — 어휘체크 + 독해 MC */
+function pageRead(pack,u,spec){
+  const bankWords = (u.vocab||[]).map(v=>v.w||v[0]).filter(Boolean);
+  // check items answers → bank subset (use their answers + a couple distractors)
+  const check = (u.check||[]).map((c,i)=>{
+    const stem=(c[0]||"").replace("___",'<span class="fl"></span>');
+    return `<div class="qq"><span class="qn">${i+1}.</span> ${esc(stem)}</div>`;
+  }).join("");
+  const bank = `<div class="wbank"><span class="wtag">WORD BANK</span>${bankWords.map(w=>`<span class="wchip">${esc(w)}</span>`).join("")}</div>`;
+  const mc = (u.mc||[]).map((m,i)=>{
+    const opts=(m.opts||[]).map((o,j)=>`<div class="opt"><span class="ol">${"ABCD"[j]}</span><span>${esc(o)}</span></div>`).join("");
+    return `<div class="qq"><span class="stem"><span class="qn">${i+1}.</span> ${esc(m.q)}${badge(m.badge)}</span><div class="opts">${opts}</div></div>`;
+  }).join("");
+  return `<section class="page">${rh(spec.no,u.ch)}
+    ${band("2","Vocabulary Check","WORD BANK")}
+    <div class="dir">Fill each blank with the right word from the bank. Each word is used once.</div>
+    ${bank}<div class="qlist">${check}</div>
+    ${band("3","Reading Comprehension","5 MULTIPLE CHOICE")}
+    <div class="dir">Circle the best answer.</div>
+    <div class="qlist tight">${mc}</div>
+    ${ft2("Unit "+spec.no+" · B")}</section>`;
+}
+
+/* PAGE 3 — 액티비티 + 서술형 */
+function pageActivity(pack,u,spec){
+  const act=u.act||{};
+  const items=(act.items||[]).map((it,i)=>{
+    const pills=[it[1],it[2]].map(o=>`<span class="pill">${esc(o)}</span>`).join("");
+    return `<div class="cw"><span class="cn">${i+1}</span><span class="ct">${esc(it[0])}</span><span class="cp">${pills}</span></div>`;
+  }).join("");
+  const sa=(u.facts||[]).map((q,i)=>`<div class="qq"><span class="stem"><span class="qn">${i+1}.</span> ${esc(q)}</span><div class="salines">${wlines(3)}</div></div>`).join("");
+  return `<section class="page">${rh(spec.no,u.ch)}
+    ${gband("Activity", esc(act.title||"Think It Through"), esc(act.hint||"circle the better option"))}
+    <div class="actwrap"><div class="dir plain">${esc(act.intro||"")}</div>${items}</div>
+    ${band("4","Short Answer","WRITE IN FULL SENTENCES")}
+    <div class="qlist">${sa}</div>
+    ${ft2("Unit "+spec.no+" · C")}</section>`;
+}
+function wboxes(n){ return Array.from({length:n},()=>'<div class="wbox"></div>').join(""); }
+
+/* PAGE 4 — 사고 설계 (THINK + MOVE + PLAN + NOTE) */
+function pageThink(pack,u,spec){
+  const tq=(u.think||[]).map(t=>{
+    const typ=Array.isArray(t)?t[0]:"", q=Array.isArray(t)?t[1]:t;
+    return `<div class="tqr"><span class="tqp"></span><span class="tqt">${esc(typ)}</span><span class="tqb">${esc(q)}</span></div>`;
+  }).join("");
+  return `<section class="page">${rh(spec.no,u.ch)}
+    <div class="h1sm">Think &amp; Plan</div>
+    <div class="sub">정답이 없는 질문입니다. 정답을 찾지 말고 <b>입장</b>을 정하세요.</div>
+    ${band("5","Choose One Question","4개 중 1개 선택 · 나머지는 토론")}
+    <div class="tq">${tq}</div>
+    ${band("6","Thinking Moves","막히면 하나를 적용")}
+    ${movesBar(spec.moves)}
+    ${band("7","Plan","쓰기 전 주제문 한 줄을 고정")}
+    <div class="frame"><div class="frow"><span class="ftag">THESIS</span><span class="fen">${spec.thesis}</span></div></div>
+    <div class="noteorg">
+      <div class="ncell"><div class="nlbl">EVIDENCE<small>from the book</small></div><div class="nwr">${wlines(2)}</div></div>
+      <div class="ncell"><div class="nlbl">SO WHAT<small>what it proves</small></div><div class="nwr">${wlines(2)}</div></div>
+      <div class="ncell"><div class="nlbl">OTHER SIDE<small>the objection</small></div><div class="nwr">${wlines(2)}</div></div>
+    </div>
+    ${ft2("Unit "+spec.no+" · D")}</section>`;
+}
+
+/* PAGE 5 — 라이팅 전면 (강화) */
+function pageWrite(pack,u,spec){
+  return `<section class="page">${rh(spec.no,u.ch)}
+    <div class="h1sm">Write</div>
+    <div class="chosen">MY QUESTION <span class="fl2"></span> <span class="tgt">TARGET ${spec.words} WORDS</span></div>
+    <div class="ruled">${Array.from({length:Math.min(48,Math.round((spec.words||100)/4)+14)},()=>'<div class="rl"></div>').join("")}</div>
+    <div class="wc">WORD COUNT <span class="bx"></span>　TIME <span class="bx"></span> min</div>
+    <div class="sc2"><div class="sclbl">SELF-CHECK · P Proficient / D Developing / B Beginning</div>
+      ${(spec.rubric||[]).concat(["질문에 답했다 — 줄거리를 다시 쓰지 않았다"]).map(r=>
+        `<div class="scitem"><span>${esc(r)}</span><span class="pdb">□ P　□ D　□ B</span></div>`).join("")}
+    </div>
+    ${ft2("Unit "+spec.no+" · E · Writing")}</section>`;
+}
+
+const MOVES_ = MOVES;
+const movesBar = ks => `<div class="moves">${(ks||[]).map(k=>
+  `<div class="move"><span class="mk">${k}</span><span class="men">${MOVES[k]||""}</span></div>`).join("")}</div>`;
+
+function coverPage(pack){
+  return `<section class="page cover">
+    <div class="cvtag">EPL · LOGIC READING &amp; WRITING</div>
+    <div class="cvttl serif">${esc(pack.title)}</div>
+    <div class="cvby serif">by ${esc(pack.author||"—")}</div>
+    <div class="cvrule"></div>
+    <div class="cvsub serif">읽은 것을 요약하지 않습니다. 읽은 것으로 주장하고, 근거를 대고, 반론에 답합니다.</div>
+    <div class="cvplan">
+      <div class="cvph">6-Unit Plan</div>
+      ${LADDER.map((s,i)=>`<div class="cvrow"><span class="cvu">Unit ${s.no}</span><span class="cvc">${esc(pack.units[i]?.ch||"")}</span><span class="cvl">${s.logic}</span><span class="cvw">${s.words}w</span></div>`).join("")}
+      <div class="cvrow fin"><span class="cvu">Final</span><span class="cvc">Whole book</span><span class="cvl">Argument Essay</span><span class="cvw">250w</span></div>
+    </div>
+    <div class="cvnote">각 유닛 5면: 배경·어휘 → 어휘체크·독해 → 액티비티·서술형 → 사고 설계 → 라이팅. 답지·해설은 별도.</div>
+  </section>`;
+}
+
+/* 미생성 유닛/파이널 자리에 조용한 빈 면 대신 명확한 경고면을 넣는다 */
+function missingUnitPage(spec){
+  return `<section class="page warnpage">${rh(spec.no,"— NOT GENERATED —")}
+    <div class="warnbox">
+      <div class="warnttl">UNIT ${spec.no} · ${esc(spec.logic)}</div>
+      <div class="warnmsg">이 유닛은 아직 생성되지 않았습니다.<br>
+        상단 라이브러리에서 이 책을 다시 <b>생성</b>하면 이 유닛부터 이어서 완성됩니다.<br>
+        완성 전에는 학생에게 배부하지 마십시오.</div>
+    </div>
+    ${ft2("Unit "+spec.no+" · 미생성")}</section>`;
+}
+function missingUnitKey(spec){
+  return `<section class="page ak warnpage">
+    <div class="akband">Answer Key</div>
+    <div class="warnbox mini"><div class="warnttl">UNIT ${spec.no} · ${esc(spec.logic)}</div>
+      <div class="warnmsg">이 유닛은 생성되지 않아 정답·해설이 없습니다.</div></div>
+    ${ft2("Unit "+spec.no+" · 미생성")}</section>`;
+}
+function missingFinalPage(){
+  return `<section class="page warnpage">${rh("06","WHOLE BOOK")}
+    <div class="warnbox"><div class="warnttl">Final · Argument Essay</div>
+      <div class="warnmsg">Final essay가 아직 생성되지 않았습니다.<br>
+        이 책을 다시 <b>생성</b>하면 마지막에 완성됩니다.</div></div>
+    ${ft2("Final · 미생성")}</section>`;
+}
+
+function finalPages(pack){
+  const f=pack.final||{prompts:[],thesis_ans:""};
+  const prompts=(f.prompts||[]).map(p=>`<div class="tqr"><span class="tqp"></span><span class="tqt">${esc(p[0])}</span><span class="tqb">${esc(p[1])}</span></div>`).join("");
+  return `<section class="page">${rh("06","WHOLE BOOK")}
+    <div class="h1sm">Final · Argument Essay</div>
+    <div class="sub">앞 5개 유닛의 논리를 하나의 5문단 논증으로 결합합니다.</div>
+    ${spine([0,1,2,3,4,5])}
+    ${band("1","Choose Your Question","3개 중 1개 · 답이 갈리는 것")}
+    <div class="tq">${prompts}</div>
+    ${band("2","Outline","영어 단어로만 · 문장 금지")}
+    <div class="noteorg col5">
+      ${[["¶1 INTRO","Hook + Thesis"],["¶2 REASON 1","+ Evidence"],["¶3 REASON 2","+ Evidence"],["¶4 COUNTER","Concede + Rebut"],["¶5 END","Restate + So what"]].map(o=>
+        `<div class="ncell"><div class="nlbl">${o[0]}<small>${o[1]}</small></div><div class="nwr">${wlines(2)}</div></div>`).join("")}
+    </div>
+    ${ft2("Final · Plan")}</section>
+  <section class="page">${rh("06","WHOLE BOOK")}
+    <div class="h1sm">Final · Write</div>
+    <div class="sub">Question <b>A / B / C</b> — circle one</div>
+    <div class="ruled">${Array.from({length:24},()=>'<div class="rl"></div>').join("")}</div>
+    <div class="wc">TOTAL WORDS <span class="bx"></span>　TIME <span class="bx"></span> min</div>
+    ${ft2("Final · Writing")}</section>`;
+}
+
+
+
+/* ---------- 답지 (TEACHER · 맨 뒤 별도) ---------- */
+function akDivider(){
+  return `<section class="page cover" style="background:var(--ink)">
+    <div style="color:#fff;text-align:center">
+      <div style="font:700 10pt/1 var(--sans);letter-spacing:.3em;color:#c9c9c9;margin-bottom:6mm">TEACHER SECTION</div>
+      <div class="serif" style="font-size:38pt;font-weight:700;color:#fff">Answer Key</div>
+      <div class="serif" style="font-style:italic;font-size:13pt;color:#c9c9c9;margin-top:4mm">정답 · 해설 · 채점 기준</div>
+      <div style="width:56px;height:2px;background:var(--red);margin:6mm auto"></div>
+      <div style="font-size:9pt;color:#a9a9a9;max-width:120mm;line-height:1.6;margin:0 auto">
+        이 뒤는 <b style="color:#fff">선생님 전용</b>입니다. 학생 배부 시 여기서부터 빼고 인쇄하십시오.<br>
+        어휘·독해는 정답이 하나입니다. 서술형·사고문항·라이팅은 정답 대신 <b style="color:#fff">채점 기준</b>과 <b style="color:#fff">되물을 질문</b>을 제공합니다.
+      </div>
+    </div></section>`;
+}
+function akUnit(pack,u,spec){
+  const e=esc;
+  const voc=(u.vocab||[]).map(v=>`${v.w}(${v.ko})`).join(" · ");
+  const check=(u.check||[]).map((c,i)=>`${i+1}. <b>${e(c[1])}</b>`).join(" &nbsp; ");
+  const mcrows=(u.mc||[]).map((m,i)=>`<tr><td class="akn">${i+1}</td><td class="aka"><span class="akb">${e(m.ans)}</span></td><td class="akw">${e((u.mc_why||[])[i]||"")}</td></tr>`).join("");
+  const sarows=(u.facts||[]).map((q,i)=>`<tr><td class="akn">${i+1}</td><td class="akw">${e((u.sa_key||[])[i]||"")}</td></tr>`).join("");
+  const tkrows=(u.think_key||[]).map((k,i)=>{
+    const typ=(u.think&&u.think[i])?u.think[i][0]:"";
+    return `<tr><td class="akn">${e(typ)}</td><td class="akw"><b>양쪽</b> ${e(k.both||"")}<br><b>P조건</b> ${e(k.p||"")}<br><span style="color:var(--red)"><b>얕으면</b> ${e(k.fail||"")}</span></td></tr>`;
+  }).join("");
+  return `<section class="page ak">
+    <div class="akband">Answer Key</div>
+    <div class="akh">Unit ${e(spec.no)} — <em>${e(u.title||"")}</em></div>
+    <div class="aksub">${e(u.ch||"")} · ${e(spec.logic)}</div>
+    <div class="aksec"><div class="aksh"><span class="akp">Vocabulary Check</span></div>
+      <div class="akbody"><div class="akline">${check}</div>
+      <div class="akvoc">어휘: ${e(voc)}</div></div></div>
+    <div class="aksec"><div class="aksh"><span class="akp">Comprehension · 왜 이 답일까</span></div>
+      <table class="aktbl"><tbody>${mcrows}</tbody></table></div>
+    <div class="aksec"><div class="aksh"><span class="akp">Short Answer · 채점 기준</span></div>
+      <table class="aktbl"><tbody>${sarows}</tbody></table></div>
+    <div class="aksec"><div class="aksh"><span class="akp">Activity 정답</span></div>
+      <div class="akbody"><div class="akline">${e(u.act&&u.act.ans||"")}</div>
+      <div class="akvoc">${e(u.act&&u.act.note||"")}</div></div></div>
+    <div class="aksec"><div class="aksh"><span class="akp">Think · 토론 채점 기준 (정답 없음)</span></div>
+      <table class="aktbl"><tbody>${tkrows}</tbody></table></div>
+    ${ft2("Unit "+spec.no+" · KEY")}</section>`;
+}
+
+function render(pack){
+  const out = [coverPage(pack)];
+  LADDER.forEach((spec,i)=>{
+    const u = (pack.units||[])[i] || {};
+    if(!unitComplete(u)){ out.push(missingUnitPage(spec)); return; }
+    out.push(pageIntro(pack,u,spec), pageRead(pack,u,spec), pageActivity(pack,u,spec),
+             pageThink(pack,u,spec), pageWrite(pack,u,spec));
+  });
+  out.push(finalComplete(pack.final) ? finalPages(pack) : missingFinalPage());
+  out.push(akDivider());
+  LADDER.forEach((spec,i)=>{ const u=(pack.units||[])[i]||{};
+    out.push(unitComplete(u) ? akUnit(pack,u,spec) : missingUnitKey(spec)); });
+  document.getElementById("sheet").innerHTML = out.join("\n");
+  document.getElementById("btnPrint").disabled = false;
+}
+
+/* ---------- 저장소 ---------- */
+const KEY = "epl_logic_packs";
+const load  = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ return {}; } };
+const save  = p => localStorage.setItem(KEY, JSON.stringify(p));
+let current = null;
+
+function slug(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""); }
+
+function drawLib(){
+  try{ drawGradeBooks(); }catch(e){}
+  const packs = load(), el = document.getElementById("lib");
+  const keys = Object.keys(packs);
+  if(!keys.length){ el.innerHTML = '<span class="empty">저장된 책이 없습니다. 위에서 책 제목을 넣고 생성하십시오.</span>'; return; }
+  el.innerHTML = keys.map(k=>`<button class="chip" data-k="${k}" aria-current="${k===current}">
+    ${packs[k].title}<span class="x" data-del="${k}" title="삭제">×</span></button>`).join("");
+  el.querySelectorAll(".chip").forEach(c=>c.onclick = e=>{
+    const k = c.dataset.k;
+    if(e.target.dataset.del){
+      if(confirm(packs[k].title + " 을 삭제합니다. 되돌릴 수 없습니다.")){
+        const p = load(); delete p[k]; save(p);
+        if(current===k){ current=null; document.getElementById("sheet").innerHTML=""; document.getElementById("btnPrint").disabled=true; }
+        drawLib();
+      }
+      return;
+    }
+    current = k; render(load()[k]); drawLib();
+    document.getElementById("sheet").scrollIntoView({behavior:"smooth"});
+  });
+}
+
+/* ---------- 로그 ---------- */
+const logEl = document.getElementById("log"), barEl = document.getElementById("bar");
+function say(msg, cls){ logEl.innerHTML += `<div class="${cls||''}">${msg}</div>`; logEl.scrollTop = logEl.scrollHeight; }
+function prog(p){ barEl.style.width = p + "%"; }
+
+/* ---------- 생성 ---------- */
+document.getElementById("btnGen").onclick = async () => {
+  const meta = {
+    title:  document.getElementById("fTitle").value.trim(),
+    author: document.getElementById("fAuthor").value.trim(),
+    level:  document.getElementById("fLevel").value,
+    notes:  document.getElementById("fNotes").value.trim()
+  };
+  if(!meta.title){ alert("책 제목을 입력하십시오."); return; }
+  const btn = document.getElementById("btnGen");
+  btn.disabled = true; logEl.innerHTML = ""; prog(0);
+  say(`${meta.title} — 6개 유닛 생성 시작. 약 40초 소요됩니다.`);
+
+  try {
+    // 이전에 일부만 만들고 실패했다면 이어서 만든다
+    const existing = load()[slug(meta.title)];
+    const units = (existing && existing._partial && Array.isArray(existing.units)) ? existing.units.slice() : [];
+    if(units.length){ say(`이전에 만든 ${units.length}개 유닛을 이어서 진행합니다.`, "ok"); prog(Math.round(units.length/6*100)); }
+    for(let i=units.length;i<LADDER.length;i++){
+      const spec = LADDER[i];
+      say(`UNIT ${spec.no} · ${spec.logic} 생성 중 ...`);
+      let u=null, lastErr=null;
+      for(let attempt=1; attempt<=3 && !u; attempt++){
+        try{
+          if(attempt>1) say(`UNIT ${spec.no} 재시도 ${attempt}/3 ...`);
+          const raw = await callClaude(unitPrompt(meta, spec), say);
+          validateUnit(raw, spec.no);   // 스키마 검증 — 부족하면 재시도
+          u = raw;
+        }catch(e){ lastErr=e; }
+      }
+      if(!u){
+        // 완성된 유닛을 임시 저장해 다음 시도 때 이어가게 한다
+        if(units.length){
+          const partial = { title: meta.title, author: meta.author||"—", level: meta.level,
+                            units, final:{prompts:[],thesis_ans:""}, made:new Date().toISOString().slice(0,10),
+                            _partial:true };
+          const packs=load(); packs[slug(meta.title)]=partial; save(packs); current=slug(meta.title); drawLib();
+          say(`UNIT ${spec.no}에서 실패했지만 앞의 ${units.length}개 유닛은 저장했습니다. 다시 누르면 이어서 만듭니다.`, "er");
+        }
+        throw new Error(`UNIT ${spec.no} 3회 실패 — ${lastErr&&lastErr.message||""}`);
+      }
+      units.push(u);
+      say(`UNIT ${spec.no} 완료 — ${u.ch} · ${u.title}`, "ok");
+      prog(Math.round((i+1)/6*100));
+    }
+    say("UNIT 06 · Final essay 생성 중 ...");
+    let final=null, fe=null;
+    for(let a=1;a<=3&&!final;a++){ try{ final=await callClaude(finalPrompt(meta), say); }catch(e){ fe=e; } }
+    if(!final) throw new Error("Final essay 3회 실패 — "+(fe&&fe.message||""));
+    prog(100);
+    say("UNIT 06 완료", "ok");
+
+    const pack = { title: meta.title, author: meta.author || "—", level: meta.level, units, final,
+                   made: new Date().toISOString().slice(0,10) };
+    const packs = load(); const k = slug(meta.title);
+    packs[k] = pack; save(packs); current = k;
+    drawLib(); render(pack);
+    say("저장 완료. 이 책은 다시 생성하지 않아도 됩니다.", "ok");
+    document.getElementById("sheet").scrollIntoView({behavior:"smooth"});
+  } catch(err){
+    say("실패 — " + err.message, "er");
+    say("생성된 유닛은 저장되지 않았습니다. 다시 시도하십시오.");
+  } finally { btn.disabled = false; }
+};
+
+/* ---------- 기준본 ---------- */
+document.getElementById("btnGiver").onclick = () => {
+  const packs = load();
+  if(!packs["the-giver"]){ packs["the-giver"] = GIVER; save(packs); }
+  current = "the-giver"; drawLib(); render(packs["the-giver"]);
+  document.getElementById("sheet").scrollIntoView({behavior:"smooth"});
+};
+
+/* ---------- 내보내기 / 불러오기 ---------- */
+document.getElementById("btnExport").onclick = async () => {
+  if(!current){ alert("먼저 책을 선택하십시오."); return; }
+  const pack = load()[current];
+  const json = JSON.stringify(pack,null,2);
+  try{
+    const dl = (window.claude&&claude.use)? await claude.use("downloads") : null;
+    if(dl){ await dl.save({filename: current + ".json", data: json}); return; }
+  }catch(e){ if(e&&e.code==="declined") return; }
+  try{
+    const blob=new Blob([json],{type:"application/json"});
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=current+".json"; a.click();
+  }catch(e){ alert("이 화면에서는 JSON 저장이 지원되지 않습니다."); }
+};
+document.getElementById("btnImport").onclick = () => document.getElementById("fileIn").click();
+document.getElementById("fileIn").onchange = e => {
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const pack = JSON.parse(r.result);
+      if(!pack.units || pack.units.length!==5) throw new Error("유닛 5개가 필요합니다.");
+      pack.units.forEach((u,i)=>{
+        if(!(u.vocab&&u.vocab.length>=8)) throw new Error("UNIT 0"+(i+1)+" — vocab 8개 이상이 아닙니다.");
+        if(u.check?.length!==6)     throw new Error("UNIT 0"+(i+1)+" — check 6개가 아닙니다.");
+        if(u.mc?.length!==5)        throw new Error("UNIT 0"+(i+1)+" — mc 5개가 아닙니다.");
+        if(u.frame?.length!==4)     throw new Error("UNIT 0"+(i+1)+" — frame 4행이 아닙니다.");
+        if(!u.act||u.act.items?.length!==4) throw new Error("UNIT 0"+(i+1)+" — activity 4개가 아닙니다.");
+        if(u.think?.length!==4)     throw new Error("UNIT 0"+(i+1)+" — think 4문항이 아닙니다.");
+        if(u.think_key?.length!==4) throw new Error("UNIT 0"+(i+1)+" — think_key 4개가 아닙니다.");
+      });
+      const packs = load(), k = slug(pack.title);
+      packs[k] = pack; save(packs); current = k; drawLib(); render(pack);
+    } catch(err){ alert("불러오기 실패 — " + err.message); }
+  };
+  r.readAsText(f);
+};
+
+/* ---------- 직접 수정 ---------- */
+const ep = document.getElementById("editPanel");
+document.getElementById("btnEdit").onclick = () => {
+  if(!current){ alert("먼저 책을 선택하십시오."); return; }
+  document.getElementById("editJson").value = JSON.stringify(load()[current], null, 2);
+  ep.hidden = false; ep.scrollIntoView({behavior:"smooth"});
+};
+document.getElementById("btnCloseEdit").onclick = () => ep.hidden = true;
+document.getElementById("btnSaveEdit").onclick = () => {
+  try {
+    const pack = JSON.parse(document.getElementById("editJson").value);
+    const packs = load(); packs[current] = pack; save(packs); render(pack); ep.hidden = true;
+  } catch(err){ alert("JSON 오류 — " + err.message); }
+};
+
+/* ---------- 툴바 ---------- */
+const bt = document.getElementById("btnTeacher");
+bt.onclick = () => {
+  const on = document.body.classList.toggle("teacher");
+  bt.setAttribute("aria-pressed", on);
+  bt.textContent = on ? "학생용 인쇄" : "교사 진행면 포함";
+};
+document.getElementById("btnPrint").onclick = () => {
+  const p = (load()||{})[current];
+  if(p){
+    const bad=[];
+    LADDER.forEach((s,i)=>{ if(!unitComplete((p.units||[])[i]||{})) bad.push("Unit "+s.no); });
+    if(!finalComplete(p.final)) bad.push("Final");
+    if(bad.length && !confirm(
+      "미완성 항목이 있습니다: "+bad.join(", ")+".\n\n이 부분은 빈 경고면으로 인쇄됩니다.\n"+
+      "취소한 뒤 이 책을 다시 [생성]하면 미완성 유닛부터 이어서 완성됩니다.\n\n그래도 인쇄하시겠습니까?")) return;
+  }
+  window.print();
+};
+
+/* ---------- The Giver 기준본 (품질 기준선) ---------- */
+const GIVER = {
+ "title": "The Giver",
+ "author": "Lois Lowry",
+ "level": "middle school (AR 5.5-7.0)",
+ "units": [
+  {
+   "ch": "CHAPTERS 1-3",
+   "title": "Welcome to the Community",
+   "background": "This story is set in a place that looks perfect at first. There is no hunger, no war, and almost no pain. But that calm has a price: the people have given up color, music, and choice, and even strong feelings, so that everyone can live in a state the community calls Sameness.",
+   "vocab": [
+    {
+     "w": "apprehensive",
+     "pos": "adj",
+     "ko": "불안한, 걱정되는",
+     "def": "worried that something bad might happen"
+    },
+    {
+     "w": "ritual",
+     "pos": "noun",
+     "ko": "의식, 정해진 절차",
+     "def": "an action done the same way every time"
+    },
+    {
+     "w": "transgression",
+     "pos": "noun",
+     "ko": "위반, 규칙 위반",
+     "def": "the act of breaking a rule or law"
+    },
+    {
+     "w": "chastise",
+     "pos": "verb",
+     "ko": "꾸짖다, 혼내다",
+     "def": "to scold someone for doing something wrong"
+    },
+    {
+     "w": "remorse",
+     "pos": "noun",
+     "ko": "후회, 뉘우침",
+     "def": "a strong feeling of being sorry"
+    },
+    {
+     "w": "nondescript",
+     "pos": "adj",
+     "ko": "특징 없는, 평범한",
+     "def": "having nothing special to notice"
+    },
+    {
+     "w": "aptitude",
+     "pos": "noun",
+     "ko": "소질, 적성",
+     "def": "a natural ability to do something well"
+    },
+    {
+     "w": "solemn",
+     "pos": "adj",
+     "ko": "엄숙한, 진지한",
+     "def": "serious and quiet"
+    }
+   ],
+   "check": [
+    [
+     "The evening \"telling of feelings\" is a family ___ that happens after dinner every night.",
+     "ritual"
+    ],
+    [
+     "Jonas was not exactly frightened, but he felt ___ about the coming Ceremony of Twelve.",
+     "apprehensive"
+    ],
+    [
+     "In the community, a third ___ of the rules means a person must be released.",
+     "transgression"
+    ],
+    [
+     "Baby Gabriel gazed up with pale, ___ eyes that looked strangely wise, though the word here is a stretch.",
+     "solemn"
+    ],
+    [
+     "The apple seemed completely ordinary — a plain, ___ piece of fruit.",
+     "nondescript"
+    ],
+    [
+     "Each child is watched for years so the Elders can match a job to the child's ___.",
+     "aptitude"
+    ]
+   ],
+   "mc": [
+    {
+     "q": "Why did Jonas decide that <i>frightened</i> was the wrong word for his feelings about December?",
+     "opts": [
+      "The word was too strong; he was really just nervous and eager.",
+      "He was actually completely happy and had no worries at all.",
+      "He had never once felt frightened in his entire life.",
+      "His father had ordered him never to use that word."
+     ],
+     "ans": "A",
+     "badge": null
+    },
+    {
+     "q": "What did Jonas's father do that actually broke a community rule?",
+     "opts": [
+      "He rode a bicycle before he was Nine years old.",
+      "He took an apple home from the recreation area.",
+      "He looked up the new baby's name early and learned it was Gabriel.",
+      "He refused to take part in the evening telling of feelings."
+     ],
+     "ans": "C",
+     "badge": null
+    },
+    {
+     "q": "The early chapters are full of rules, rituals, and careful language. Why might the author include so many of them?",
+     "opts": [
+      "To show the community is exciting and full of adventure.",
+      "To prove the people are secretly planning to escape.",
+      "To explain how the bicycles are built and repaired.",
+      "To make readers feel how controlled and orderly daily life is."
+     ],
+     "ans": "D",
+     "badge": "intent"
+    },
+    {
+     "q": "The family discusses \"release\" very calmly. What can you infer about how the community sees it?",
+     "opts": [
+      "Release simply means a person moves to a nicer town.",
+      "Release is treated as a normal, accepted part of life, even though it sounds serious.",
+      "Everyone is terrified of release and refuses to speak of it.",
+      "Only children are ever released."
+     ],
+     "ans": "B",
+     "badge": "infer"
+    },
+    {
+     "q": "Jonas sees the apple \"change,\" and baby Gabriel has pale eyes like his own. What do these two details hint about Jonas?",
+     "opts": [
+      "Jonas needs glasses and cannot see clearly.",
+      "Jonas is about to be released from the community.",
+      "Jonas dislikes both apples and babies.",
+      "Jonas is somehow different from almost everyone else."
+     ],
+     "ans": "D",
+     "badge": "infer"
+    }
+   ],
+   "mc_why": [
+    "Jonas는 진짜 위험이 닥쳤을 때 쓰는 <b>너무 강한 말</b>이라 생각해요. 그가 느끼는 건 기대 반 긴장 반 — 그래서 apprehensive가 정확한 단어죠. (precision of language 주제와 직결)",
+    "아빠는 규칙을 어기고 <b>아기의 이름(Gabriel)을 미리</b> 명단에서 찾아봤어요. (B의 사과를 가져간 건 Jonas — 헷갈리게 만든 함정!)",
+    "규칙·의식·언어 수업이 끝없이 나와요. 작가는 이걸로 공동체가 <b>얼마나 통제되고 질서정연한지 — 너무 완벽한지</b>를 독자가 느끼게 해요.",
+    "가족이 release를 아주 <b>담담하게</b> 이야기하죠. 무섭게 들리는 일인데도 공동체에선 <b>당연하고 받아들여지는 일</b>로 다뤄진다는 걸 추론할 수 있어요.",
+    "옅은 눈 + 사과가 변하는 걸 본 일 — 둘 다 Jonas가 <b>다른 사람들과 다르다</b>는 작은 신호예요. (A·C는 너무 평범한 해석, B는 근거 없음.)"
+   ],
+   "facts": [
+    "Usually \"release\" is a serious, final punishment. Name the <b>two</b> kinds of release the family says are <i>not</i> a punishment, and say one thing about each.",
+    "Jonas's community has no hunger, no danger, and few surprises — but almost no real choices. Would <b>you</b> want to live there? Use at least one detail from these chapters."
+   ],
+   "sa_key": [
+    "release of the very old (a celebrated, honored event) and release of a newborn that is not thriving; both are spoken of calmly, not as punishment.",
+    "열린 문항 — 책 속 근거 1개 + 자기 입장이면 통과."
+   ],
+   "frame": [
+    [
+     "OPINION",
+     "I think <span class='blank lg'></span>"
+    ],
+    [
+     "REASON",
+     "This is because <span class='blank lg'></span>"
+    ],
+    [
+     "OPINION",
+     "If I were there, I would <span class='blank lg'></span>"
+    ],
+    [
+     "REASON",
+     "This is because <span class='blank lg'></span>"
+    ]
+   ],
+   "frame_ans": "I think the community's rules take away too much. This is because people cannot choose their own words or feelings.",
+   "act": {
+    "title": "Precision of Language",
+    "hint": "circle the more exact word",
+    "intro": "In Jonas's community, people must use the exact right word. For each situation, circle the word that fits best.",
+    "items": [
+     [
+      "Jonas feels uneasy about the Ceremony that has not happened yet.",
+      "frightened",
+      "apprehensive"
+     ],
+     [
+      "Asher stops to watch the salmon and gets a little off-task for a moment.",
+      "distraught",
+      "distracted"
+     ],
+     [
+      "Lily grumbles in a childish, bad-tempered way about waiting.",
+      "cheerfully",
+      "petulantly"
+     ],
+     [
+      "The community's soft, gentle word for sending someone away forever.",
+      "released",
+      "removed"
+     ]
+    ],
+    "ans": "1) apprehensive · 2) distracted · 3) petulantly · 4) released",
+    "note": "정답이 갈리면 왜 그 단어인지 근거를 물어라."
+   },
+   "think": [
+    [
+     "INTERPRET",
+     "The community makes everyone say every feeling out loud each night. Does naming a feeling out loud make it smaller, or make it more real?"
+    ],
+    [
+     "JUDGE",
+     "\"Precision of language\" means using the exact word. Is this a way to think more clearly, or a way to control what people can think?"
+    ],
+    [
+     "APPLY",
+     "Your school has rules too. Pick one. Is it protecting you, or controlling you? How can you tell the difference?"
+    ],
+    [
+     "SUPPOSE",
+     "If your family had to share every feeling every night, what would you hide? Why would you hide it?"
+    ]
+   ],
+   "think_key": [
+    {
+     "both": "작아진다 — 말하면 가족이 처리하고 감정은 절차가 된다. ｜ 진짜가 된다 — 이름을 얻어야 감정이 뚜렷해진다.",
+     "p": "'말하기'가 감정에 무엇을 하는지 동사로 설명하면 P.",
+     "fail": "\"좋다/나쁘다\"로 끝난다 → 되물어라: \"말한 다음 그 감정은 어떻게 되지?\""
+    },
+    {
+     "both": "돕는다 — 정확한 단어가 없으면 정확히 생각 못 한다. ｜ 가둔다 — 쓸 단어를 정하면 할 생각도 정해진다.",
+     "p": "단어와 생각의 관계를 한 방향으로 설명하면 P.",
+     "fail": "규칙 설명만 반복 → 되물어라: \"단어를 뺏으면 생각도 뺏기나?\""
+    },
+    {
+     "both": "보호 — 없으면 다치는 사람이 생긴다. ｜ 통제 — 이유를 설명 못 하는 규칙은 통제다.",
+     "p": "자기 학교 규칙 하나를 특정하고 자기 기준을 적용하면 P.",
+     "fail": "일반론으로 흐른다 → 되물어라: \"그 규칙 이름이 뭐지? 그거 하나만.\""
+    },
+    {
+     "both": "개인 답변. 숨긴다 — 판단당한다. ｜ 안 숨긴다 — 숨기는 게 더 힘들다.",
+     "p": "'왜 숨기는지'에 문장이 더 많으면 P.",
+     "fail": "숨길 항목만 나열 → 되물어라: \"그걸 숨기면 뭘 지키게 되지?\""
+    }
+   ]
+  },
+  {
+   "ch": "CHAPTERS 4-6",
+   "title": "The Rules of a Careful Life",
+   "background": "In these chapters Jonas spends his volunteer hours at the House of the Old, where he helps care for elderly people. There he hears about a release celebration for one of the Old — a calm, happy event with a story, a toast, and a walk through a special door. No one asks where the person actually goes.",
+   "vocab": [
+    {
+     "w": "relinquish",
+     "pos": "verb",
+     "ko": "포기하다, 내주다",
+     "def": "to give something up or let it go"
+    },
+    {
+     "w": "somber",
+     "pos": "adj",
+     "ko": "침울한, 어두운",
+     "def": "serious, sad, and quiet in mood"
+    },
+    {
+     "w": "serene",
+     "pos": "adj",
+     "ko": "고요한, 평온한",
+     "def": "calm and peaceful"
+    },
+    {
+     "w": "invariably",
+     "pos": "adv",
+     "ko": "변함없이, 언제나",
+     "def": "always, in every case"
+    },
+    {
+     "w": "reprieve",
+     "pos": "noun",
+     "ko": "유예, 집행 연기",
+     "def": "a delay before a punishment happens"
+    },
+    {
+     "w": "luxury",
+     "pos": "noun",
+     "ko": "호사, 특별한 즐거움",
+     "def": "a pleasure that is rare or special"
+    },
+    {
+     "w": "meticulous",
+     "pos": "adj",
+     "ko": "꼼꼼한, 세심한",
+     "def": "very careful about small details"
+    },
+    {
+     "w": "obscure",
+     "pos": "verb",
+     "ko": "가리다, 흐릿하게 하다",
+     "def": "to hide or make hard to see"
+    }
+   ],
+   "check": [
+    [
+     "The House of the Old was a ___, slow-paced place, very different from the busy work centers.",
+     "serene"
+    ],
+    [
+     "Baby Gabriel was given a special ___ — one more year of nurturing instead of being released.",
+     "reprieve"
+    ],
+    [
+     "Choosing where to spend volunteer hours felt like a wonderful ___, since most of the day was tightly controlled.",
+     "luxury"
+    ],
+    [
+     "Jonas's family signed a pledge to ___ Gabriel without protest when he was placed next year.",
+     "relinquish"
+    ],
+    [
+     "A Ceremony of Loss is a ___, sorrowful day when the community repeats a lost child's name.",
+     "somber"
+    ],
+    [
+     "The rules for each age are followed ___ — no family ever ignores them.",
+     "invariably"
+    ]
+   ],
+   "mc": [
+    {
+     "q": "According to Larissa, what happens at a release celebration for one of the Old?",
+     "opts": [
+      "The person is given a new bicycle and sent back to school.",
+      "The whole community spends a silent day repeating the person's name.",
+      "They tell the person's life story, share a toast and the anthem, and the person walks through a special door.",
+      "Nothing special happens; the person simply stops coming to meals."
+     ],
+     "ans": "C",
+     "badge": null
+    },
+    {
+     "q": "Why was baby Gabriel labeled \"Uncertain\" and given an extra year, instead of being released?",
+     "opts": [
+      "He was not growing or sleeping well enough yet, so Jonas's father pleaded for more time.",
+      "He was the smartest newchild the community had ever seen.",
+      "He had broken one of the community's important rules.",
+      "His real family unit had suddenly asked for him back."
+     ],
+     "ans": "A",
+     "badge": null
+    },
+    {
+     "q": "The Old call release \"wonderful\" and \"pure happiness,\" yet admit they don't know where the released go. What does this suggest to a careful reader?",
+     "opts": [
+      "Release is clearly a happy vacation to a warm, sunny place.",
+      "The Old are lying on purpose to trick Jonas.",
+      "Release is exactly the same thing as the Ceremony of Loss.",
+      "People celebrate release without really knowing what it is — which feels uneasy."
+     ],
+     "ans": "D",
+     "badge": "infer"
+    },
+    {
+     "q": "Jonas takes the pill, and the warm feelings from his dream disappear. What is the community really doing with these pills?",
+     "opts": [
+      "Curing a dangerous disease that could spread to others.",
+      "Removing strong or romantic feelings so everyone stays calm and the same.",
+      "Helping the children grow taller and stronger.",
+      "Making sure children can remember their dreams better."
+     ],
+     "ans": "B",
+     "badge": "infer"
+    },
+    {
+     "q": "The author lists the exact rules for each age — back-button jackets, front-button at Seven, bikes at Nine. Why include all these tiny rules?",
+     "opts": [
+      "To teach the reader how to sew jackets and cut hair.",
+      "To show that the community is messy and disorganized.",
+      "To show how completely the community plans and controls every stage of a person's life.",
+      "To prove the children dislike their assigned clothes."
+     ],
+     "ans": "C",
+     "badge": "intent"
+    }
+   ],
+   "mc_why": [
+    "Larissa가 설명하는 release는 <b>인생 이야기·건배·특별한 문</b>이 있는 축하 행사예요. (하지만 어디로 가는지는 아무도 몰라요.)",
+    "Gabriel은 <b>잘 자라지 못하고 잠도 잘 못 자서</b>, 아빠가 1년을 더 달라고 청했어요.",
+    "멋진 일이라면서도 <b>어디로 가는지 모른다</b>는 게 핵심. 정체를 모른 채 축하한다는 <b>불편함</b>이 추론 포인트예요.",
+    "약(pill)은 <b>강한 감정·설렘(Stirrings)을 없애</b> 모두를 차분하고 똑같게 만들어요. 병 치료가 아니에요.",
+    "나이별 규칙을 시시콜콜 나열한 건 공동체가 <b>인생의 모든 단계를 계획·통제</b>한다는 걸 보여주려는 의도예요."
+   ],
+   "facts": [
+    "The pills stop the \"Stirrings.\" Name <b>one</b> thing the community gains by giving everyone this pill, and <b>one</b> thing the people lose.",
+    "Gabriel gets a \"reprieve\" — one more year before a decision. Do you think giving people a second chance is always kind? Explain, using Gabriel."
+   ],
+   "sa_key": [
+    "gains: calm, order, and Sameness with no strong or romantic feelings. loses: love, desire, and part of what makes each person an individual.",
+    "열린 문항 — 책 속 근거 1개 + 자기 입장이면 통과."
+   ],
+   "frame": [
+    [
+     "CAUSE",
+     "Because <span class='blank lg'></span>"
+    ],
+    [
+     "EFFECT",
+     "As a result, <span class='blank lg'></span>"
+    ],
+    [
+     "CAUSE",
+     "This happens because <span class='blank lg'></span>"
+    ],
+    [
+     "EFFECT",
+     "Therefore, <span class='blank lg'></span>"
+    ]
+   ],
+   "frame_ans": "Because Jonas is chosen as Receiver, he must train alone. As a result, he grows apart from his friends.",
+   "act": {
+    "title": "Gain and Cost",
+    "hint": "every rule buys something and pays for something",
+    "intro": "Each community rule buys safety or order but also costs something. For each rule, circle what it mainly costs the people.",
+    "items": [
+     [
+      "Everyone takes a pill that removes the Stirrings.",
+      "strong feelings",
+      "daily meals"
+     ],
+     [
+      "Release is spoken of as calm and happy, never explained.",
+      "honest knowledge",
+      "free bicycles"
+     ],
+     [
+      "Families are given exactly two children by the Elders.",
+      "natural choice",
+      "clean housing"
+     ],
+     [
+      "Every stage of life has an exact, fixed rule.",
+      "personal freedom",
+      "enough food"
+     ]
+    ],
+    "ans": "1) strong feelings · 2) honest knowledge · 3) natural choice · 4) personal freedom",
+    "note": "정답이 갈리면 왜 그 단어인지 근거를 물어라."
+   },
+   "think": [
+    [
+     "INTERPRET",
+     "The community calls release \"wonderful,\" yet no one knows where the released go. Why would people celebrate something they do not understand?"
+    ],
+    [
+     "JUDGE",
+     "The pills remove strong feelings so everyone stays calm. Is a calm life without strong feeling a good trade, or too high a price?"
+    ],
+    [
+     "APPLY",
+     "Adults sometimes remove what upsets us \"for our own good.\" When is that care, and when is it control?"
+    ],
+    [
+     "SUPPOSE",
+     "If Gabriel had never been given a reprieve, would Jonas still have changed? So what really wakes Jonas up?"
+    ]
+   ],
+   "think_key": [
+    {
+     "both": "모르니까 안심 — 모르면 무섭지 않다. ｜ 알면 못 견뎌서 — 진실을 알면 축하할 수 없다.",
+     "p": "'모름'이 사람들에게 무엇을 해주는지 말하면 P.",
+     "fail": "줄거리 재서술 → 되물어라: \"모른다는 게 사람들에게 왜 편하지?\""
+    },
+    {
+     "both": "좋은 거래 — 안전과 평온이 남는다. ｜ 너무 비싸 — 사랑·설렘까지 사라진다.",
+     "p": "약이 없앤 것 하나를 명명하고 그 가치를 말하면 P.",
+     "fail": "\"약은 나쁘다\"로 끝난다 → 되물어라: \"약을 먹여서 공동체가 얻은 건 뭐지?\""
+    },
+    {
+     "both": "보살핌 — 실제로 다칠 걸 막는다. ｜ 통제 — 이유를 안 알려주면 통제다.",
+     "p": "보살핌과 통제를 가르는 선을 한 줄로 대면 P.",
+     "fail": "경험담만 → 되물어라: \"그 둘을 가르는 선이 뭐지?\""
+    },
+    {
+     "both": "제로/가브리엘(대상) — 지킬 사람이 있어서 바뀐다. ｜ 기억(정보) — 기억이 눈을 뜨게 한다.",
+     "p": "대상과 정보 중 하나를 원인으로 지목하면 P.",
+     "fail": "\"둘 다\"로 끝난다 → 되물어라: \"하나만 있어야 한다면?\""
+    }
+   ]
+  },
+  {
+   "ch": "CHAPTERS 7-9",
+   "title": "The Ceremony of Twelve",
+   "background": "At the Ceremony of Twelve, each child is given a life assignment. When the Chief Elder reaches Jonas's number, she skips him — and Jonas is left standing, confused and ashamed, in front of the whole community.",
+   "vocab": [
+    {
+     "w": "unanimous",
+     "pos": "adj",
+     "ko": "만장일치의",
+     "def": "agreed on by absolutely everyone"
+    },
+    {
+     "w": "humiliation",
+     "pos": "noun",
+     "ko": "굴욕, 창피",
+     "def": "the feeling of being shamed in front of others"
+    },
+    {
+     "w": "prestige",
+     "pos": "noun",
+     "ko": "명성, 위신",
+     "def": "respect earned by rank or achievement"
+    },
+    {
+     "w": "profound",
+     "pos": "adj",
+     "ko": "깊은, 심오한",
+     "def": "very deep or very strongly felt"
+    },
+    {
+     "w": "rigorous",
+     "pos": "adj",
+     "ko": "혹독한, 엄격한",
+     "def": "very hard, strict, and demanding"
+    },
+    {
+     "w": "anguish",
+     "pos": "noun",
+     "ko": "극심한 고통, 번민",
+     "def": "very great pain or suffering of the mind"
+    },
+    {
+     "w": "integrity",
+     "pos": "noun",
+     "ko": "진실성, 정직",
+     "def": "being honest and holding to what is right"
+    },
+    {
+     "w": "conspicuous",
+     "pos": "adj",
+     "ko": "눈에 띄는, 두드러진",
+     "def": "easily seen and standing out"
+    }
+   ],
+   "check": [
+    [
+     "When the Chief Elder skipped his number, Jonas felt deep ___ in front of the whole community.",
+     "humiliation"
+    ],
+    [
+     "The choice of a new Receiver must be ___ — every Elder has to agree, with no doubts.",
+     "unanimous"
+    ],
+    [
+     "Birthmother is an important job, but Jonas's mother said it has little ___ or honor.",
+     "prestige"
+    ],
+    [
+     "Becoming the Receiver requires ___ training, including pain beyond anything Jonas has known.",
+     "rigorous"
+    ],
+    [
+     "The Chief Elder spoke about the ___ importance of each child's Assignment.",
+     "profound"
+    ],
+    [
+     "The Chief Elder apologized to Jonas for the ___ she had caused him by skipping his turn.",
+     "anguish"
+    ]
+   ],
+   "mc": [
+    {
+     "q": "What surprising thing happened when it was finally Jonas's turn at the Ceremony?",
+     "opts": [
+      "He was given the Assignment of Pilot.",
+      "The Chief Elder skipped his number and moved on to the next person.",
+      "He fainted on the stage in front of everyone.",
+      "He was named Caretaker of the Old, just like Fiona."
+     ],
+     "ans": "B",
+     "badge": null
+    },
+    {
+     "q": "What are the four qualities the Chief Elder says a Receiver must have?",
+     "opts": [
+      "Speed, strength, humor, and obedience.",
+      "Kindness, beauty, wealth, and patience.",
+      "Intelligence, integrity, courage, and wisdom.",
+      "Honesty, silence, neatness, and luck."
+     ],
+     "ans": "C",
+     "badge": null
+    },
+    {
+     "q": "Jonas's sheet says \"You may lie,\" and he wonders if all adults received the same rule. Why does this thought frighten him so much?",
+     "opts": [
+      "If everyone might be allowed to lie, he could never be sure any answer he gets is true.",
+      "He is afraid he will forget how to lie properly.",
+      "He worries the rule will soon be taken away from him.",
+      "He thinks lying will make him a worse student."
+     ],
+     "ans": "A",
+     "badge": "infer"
+    },
+    {
+     "q": "The Receiver-in-training must be \"alone, apart,\" may be rude, and may not discuss training with anyone. What do these rules suggest about the role?",
+     "opts": [
+      "The Receiver will have an easy, relaxing life.",
+      "The Receiver is secretly being punished for a crime.",
+      "The Receiver gets to make all of the community's rules.",
+      "The Receiver carries something so unusual that it sets him apart from everyone else."
+     ],
+     "ans": "D",
+     "badge": "infer"
+    },
+    {
+     "q": "The author spends a long time on the cheerful \"snack vs. smack\" discipline story right before Jonas is skipped. Why include it?",
+     "opts": [
+      "To prove that Asher is a bad person.",
+      "To teach readers the difference between the words \"snack\" and \"smack.\"",
+      "To show that the community has no real rules at all.",
+      "To reveal, under the laughter, how strictly and even painfully the community controls people — just before something painful happens to Jonas."
+     ],
+     "ans": "D",
+     "badge": "intent"
+    }
+   ],
+   "mc_why": [
+    "Jonas 차례에 Chief Elder가 <b>번호를 건너뛰어요</b>. 배정이 아니라 선택(selected)의 신호죠.",
+    "Receiver의 네 자질: <b>Intelligence, Integrity, Courage, Wisdom</b>.",
+    "거짓말해도 된다는 규칙이 무서운 건, <b>모두가 거짓말할 수 있다면 어떤 답도 참인지 알 수 없기</b> 때문이에요.",
+    "혼자·따로·비밀 — 이 규칙들은 Receiver가 <b>모두와 다를 만큼 특별한 무언가</b>를 진다는 뜻이에요.",
+    "웃긴 snack vs smack 이야기 밑에, <b>공동체가 얼마나 엄격하게(때로 고통스럽게) 통제하는지</b>를 깔아둔 거예요 — Jonas가 상처받기 직전에."
+   ],
+   "facts": [
+    "The Chief Elder calls being selected a great <b>honor</b>. List <b>two</b> things Jonas must give up because of this honor.",
+    "Of all the special rules Jonas is given, he is most disturbed that he <i>may lie</i>. Why do you think that one rule troubles him more than the others?"
+   ],
+   "sa_key": [
+    "he must train alone and apart, he cannot share his training or feelings with friends or family, he may not take the pills; any two.",
+    "열린 문항 — 책 속 근거 1개 + 자기 입장이면 통과."
+   ],
+   "frame": [
+    [
+     "SIDE A",
+     "At first, <span class='blank lg'></span>"
+    ],
+    [
+     "CONTRAST",
+     "However, <span class='blank lg'></span>"
+    ],
+    [
+     "CONTRAST",
+     "Unlike that, <span class='blank lg'></span>"
+    ],
+    [
+     "SO WHAT",
+     "This shows that <span class='blank lg'></span>"
+    ]
+   ],
+   "frame_ans": "At first the community looks safe. However, the memories show it gave up color and love. This shows its peace has a hidden cost.",
+   "act": {
+    "title": "Honor or Punishment?",
+    "hint": "one word, two very different meanings",
+    "intro": "Being \"selected\" sounds like an honor, but each part of it also feels like a punishment. For each rule, circle the word that better describes how it would feel.",
+    "items": [
+     [
+      "You may not talk about your training with anyone, ever.",
+      "honor",
+      "isolation"
+     ],
+     [
+      "You alone will carry the community's memories.",
+      "burden",
+      "reward"
+     ],
+     [
+      "You may be rude and ask anyone any question.",
+      "freedom",
+      "freedom"
+     ],
+     [
+      "You may lie, though no one else in the community may.",
+      "trust",
+      "danger"
+     ]
+    ],
+    "ans": "1) isolation · 2) burden · 3) freedom · 4) danger",
+    "note": "정답이 갈리면 왜 그 단어인지 근거를 물어라."
+   },
+   "think": [
+    [
+     "INTERPRET",
+     "The community erased color, weather, and pain together. Why could they not remove only the pain and keep the color?"
+    ],
+    [
+     "JUDGE",
+     "The Giver says memory brings wisdom. Can a person become wise without ever being hurt? Answer with a reason, not a feeling."
+    ],
+    [
+     "APPLY",
+     "We also delete what makes us uncomfortable — we block, mute, and scroll past. What do we lose along with the discomfort?"
+    ],
+    [
+     "SUPPOSE",
+     "If you could give away one painful memory forever, would you? Name what you would lose along with it."
+    ]
+   ],
+   "think_key": [
+    {
+     "both": "붙어 있다 — 색을 보는 눈이 상처도 본다. ｜ 뺄 수 있었다 — 그들은 통제를 원한 것이다.",
+     "p": "고통과 같은 뿌리인 것을 하나 지목하면 P.",
+     "fail": "\"Sameness 때문에\"로 끝난다 → 되물어라: \"고통이랑 색이 왜 같이 사라졌지?\""
+    },
+    {
+     "both": "가능 — 남의 고통을 보고도 배운다. ｜ 불가능 — 겪지 않은 건 정보지 지혜가 아니다.",
+     "p": "'지혜'와 '정보'를 구분하면 P.",
+     "fail": "감정으로 답한다 → 되물어라: \"지혜가 뭔지 먼저 정의해봐.\""
+    },
+    {
+     "both": "잃는다 — 나와 다른 생각, 틀렸다는 신호. ｜ 안 잃는다 — 지운 건 소음이다.",
+     "p": "함께 사라지는 것에 이름을 붙이면 P.",
+     "fail": "SNS 좋다/나쁘다 → 되물어라: \"차단한 다음 못 보게 된 게 뭐지?\""
+    },
+    {
+     "both": "넘긴다 — 고통이 사라지면 편하다. ｜ 안 넘긴다 — 그 기억이 지금 내 판단 기준이다.",
+     "p": "함께 사라지는 것을 명명하면 P.",
+     "fail": "기억 내용만 → 되물어라: \"그게 사라지면 너는 뭐가 달라지지?\""
+    }
+   ]
+  },
+  {
+   "ch": "CHAPTERS 10-13",
+   "title": "Memories and Color",
+   "background": "Jonas begins training with the old Receiver, who asks Jonas to call him The Giver. The Giver holds all the memories of the whole community — everything the people gave up to live in Sameness.",
+   "vocab": [
+    {
+     "w": "transmit",
+     "pos": "verb",
+     "ko": "전달하다, 전송하다",
+     "def": "to pass something on to another"
+    },
+    {
+     "w": "vivid",
+     "pos": "adj",
+     "ko": "생생한, 선명한",
+     "def": "very clear, bright, and lifelike"
+    },
+    {
+     "w": "wisdom",
+     "pos": "noun",
+     "ko": "지혜",
+     "def": "knowing what is right and true from experience"
+    },
+    {
+     "w": "crimson",
+     "pos": "noun",
+     "ko": "진홍색",
+     "def": "a deep, strong red color"
+    },
+    {
+     "w": "assuage",
+     "pos": "verb",
+     "ko": "달래다, 누그러뜨리다",
+     "def": "to make a pain or feeling less strong"
+    },
+    {
+     "w": "indescribable",
+     "pos": "adj",
+     "ko": "형언할 수 없는",
+     "def": "too strong or strange to put into words"
+    },
+    {
+     "w": "exhilarating",
+     "pos": "adj",
+     "ko": "짜릿한, 신나는",
+     "def": "making you feel very happy and alive"
+    },
+    {
+     "w": "frigid",
+     "pos": "adj",
+     "ko": "몹시 추운",
+     "def": "extremely cold"
+    }
+   ],
+   "check": [
+    [
+     "The Giver could ___ a whole memory to Jonas just by placing his hands on Jonas's back.",
+     "transmit"
+    ],
+    [
+     "Sledding down the snowy hill was ___ — Jonas laughed with a joy he had never known.",
+     "exhilarating"
+    ],
+    [
+     "The community keeps one Receiver so someone holds the ___ to guide hard decisions.",
+     "wisdom"
+    ],
+    [
+     "Slowly Jonas began to see faint flashes of ___ — the deep red of an apple and Fiona's hair.",
+     "crimson"
+    ],
+    [
+     "The Giver took part of the pain back to ___ Jonas after a hard memory.",
+     "assuage"
+    ],
+    [
+     "The memory of snow was so ___ that Jonas could almost feel the cold on his face.",
+     "vivid"
+    ]
+   ],
+   "mc": [
+    {
+     "q": "What is the very first memory The Giver transmits to Jonas?",
+     "opts": [
+      "A war with soldiers and cannons.",
+      "Riding a sled down a snowy hill.",
+      "A birthday party with a cake.",
+      "A boat trip across a warm sea."
+     ],
+     "ans": "B",
+     "badge": null
+    },
+    {
+     "q": "Why can no one in the community see color?",
+     "opts": [
+      "Everyone is born unable to see it.",
+      "The lights in the community are too dim.",
+      "Color was removed long ago as part of creating Sameness.",
+      "Only children can see color, and adults forget it."
+     ],
+     "ans": "C",
+     "badge": null
+    },
+    {
+     "q": "The Giver says memories give people <i>wisdom</i>. Why must the community keep even one person who holds them?",
+     "opts": [
+      "So that someone can entertain the Elders with old stories.",
+      "So that someone has the wisdom to advise the Elders when a hard choice comes.",
+      "So the memories can be sold to other communities.",
+      "So children have someone to visit on holidays."
+     ],
+     "ans": "B",
+     "badge": "infer"
+    },
+    {
+     "q": "Jonas is thrilled by snow and color, but The Giver warns that memory also brings pain. What does this suggest about the community's choice?",
+     "opts": [
+      "The community made the right choice with no cost at all.",
+      "To remove pain, the community also had to remove joy, color, and deep feeling.",
+      "The community could easily bring color back at any time.",
+      "Pain and joy have nothing to do with each other."
+     ],
+     "ans": "B",
+     "badge": "infer"
+    },
+    {
+     "q": "The author has Jonas feel great joy (snow) <i>before</i> feeling real pain (sunburn, then worse). Why build the memories in that order?",
+     "opts": [
+      "To make the reader think memory is only ever fun.",
+      "To let Jonas — and the reader — first love what was lost, so its loss hurts more.",
+      "To prove that sledding is dangerous.",
+      "To show that The Giver enjoys tricking Jonas."
+     ],
+     "ans": "B",
+     "badge": "intent"
+    }
+   ],
+   "mc_why": [
+    "첫 기억은 <b>눈 언덕 썰매</b>예요. (햇살·무지개·생일은 그 뒤.)",
+    "색은 <b>Sameness를 만들며 오래전에 제거</b>됐어요. 못 보는 게 아니라 사라진 거예요.",
+    "기억은 <b>지혜(wisdom)</b>를 줘요. 어려운 결정을 조언할 사람이 필요해서 Receiver를 한 명 남겨둬요.",
+    "눈·색의 기쁨과 함께 <b>고통</b>도 온다는 것 — 공동체가 고통을 없애려 <b>기쁨·색·깊은 감정까지</b> 없앴다는 뜻이에요.",
+    "큰 기쁨(눈) → 진짜 고통(화상) 순서. <b>먼저 사랑하게 만든 뒤 잃게</b> 해서 상실을 더 아프게 느끼게 해요."
+   ],
+   "facts": [
+    "In the memories, Jonas gains things the community erased. Name <b>two</b> things that exist in the memories but not in the community.",
+    "The community removed pain — but also removed color and joy. Do you think that trade was worth it? Explain using one memory Jonas receives."
+   ],
+   "sa_key": [
+    "color, sunshine/weather, hills, snow, animals, real love, real pain — any two.",
+    "열린 문항 — 책 속 근거 1개 + 자기 입장이면 통과."
+   ],
+   "frame": [
+    [
+     "CLAIM",
+     "I claim that <span class='blank lg'></span>"
+    ],
+    [
+     "EVIDENCE",
+     "In the story, <span class='blank lg'></span>"
+    ],
+    [
+     "EXPLAIN",
+     "This shows that <span class='blank lg'></span>"
+    ],
+    [
+     "THEREFORE",
+     "Therefore, <span class='blank lg'></span>"
+    ]
+   ],
+   "frame_ans": "I claim the community hides the truth to keep control. In the story, Jonas watches his father release a baby. This shows a kind person can do harm without knowing it.",
+   "act": {
+    "title": "Community vs. Memory",
+    "hint": "two worlds, side by side",
+    "intro": "Compare life in the community with what Jonas feels in the memories. For each, circle where it belongs.",
+    "items": [
+     [
+      "Everything looks gray, flat, and exactly the same.",
+      "community",
+      "memory"
+     ],
+     [
+      "Bright color, snow, warm sunshine, and real hills.",
+      "community",
+      "memory"
+     ],
+     [
+      "No sunburn, no war, no deep sadness — but no deep joy either.",
+      "community",
+      "memory"
+     ],
+     [
+      "Real love, and also real pain, felt fully.",
+      "community",
+      "memory"
+     ]
+    ],
+    "ans": "1) community · 2) memory · 3) community · 4) memory",
+    "note": "정답이 갈리면 왜 그 단어인지 근거를 물어라."
+   },
+   "think": [
+    [
+     "INTERPRET",
+     "Jonas's father speaks gently to the baby and then ends its life. How can both be true of one person at the same time?"
+    ],
+    [
+     "JUDGE",
+     "Who is more responsible for release — the leaders who made the rule, or the father who follows it without asking why?"
+    ],
+    [
+     "APPLY",
+     "The citizens are not evil; they simply do not know. Is \"I did not know\" a real excuse? Where is the line?"
+    ],
+    [
+     "SUPPOSE",
+     "Name one thing people around you treat as normal that you believe is wrong. What stops everyone from questioning it?"
+    ]
+   ],
+   "think_key": [
+    {
+     "both": "모른다 — 자기가 뭘 하는지 모른다. ｜ 안다 — 알면서 절차라서 한다.",
+     "p": "'다정함'이 행동에 대한 건지 사람에 대한 건지 구분하면 P.",
+     "fail": "\"나쁜 사람\"으로 끝난다 → 되물어라: \"그 다정한 목소리는 뭐였지?\""
+    },
+    {
+     "both": "만든 자 — 정보를 독점했다. ｜ 따른 자 — 묻지 않은 것도 선택이다.",
+     "p": "'책임'의 기준을 먼저 정하면 P.",
+     "fail": "\"둘 다\"로 끝난다 → 되물어라: \"책임은 권한인가, 알 수 있었나인가?\""
+    },
+    {
+     "both": "안 된다 — 알 수 있었으면 몰랐어도 책임. ｜ 된다 — 알 방법이 없으면 책임 없다.",
+     "p": "'알 수 있었는가'를 기준으로 세우면 P.",
+     "fail": "\"상황마다 다르다\" → 되물어라: \"그 다름을 가르는 선은?\""
+    },
+    {
+     "both": "개인 답변. 대상은 무엇이든. 중요한 건 두 번째 질문.",
+     "p": "대상을 특정하고 '왜 아무도 안 묻는가'에 답하면 P.",
+     "fail": "대상만 쓴다 → 되물어라: \"왜 아무도 그걸 안 물어보지?\""
+    }
+   ]
+  },
+  {
+   "ch": "CHAPTERS 14-18",
+   "title": "The Weight of Truth",
+   "background": "The memories grow heavier. Jonas receives the memory of war — a battlefield, a dying boy, and thirst — and the memory of true love, a warm family gathered by a fire at a holiday. He begins to understand how much the community gave up for its calm.",
+   "vocab": [
+    {
+     "w": "obsolete",
+     "pos": "adj",
+     "ko": "더 이상 쓰이지 않는",
+     "def": "no longer used or needed"
+    },
+    {
+     "w": "agony",
+     "pos": "noun",
+     "ko": "극심한 고통",
+     "def": "very great pain of the body or mind"
+    },
+    {
+     "w": "vigilant",
+     "pos": "adj",
+     "ko": "경계하는, 주의 깊은",
+     "def": "carefully watching for danger"
+    },
+    {
+     "w": "inflict",
+     "pos": "verb",
+     "ko": "(고통을) 가하다",
+     "def": "to cause pain or harm to someone"
+    },
+    {
+     "w": "stealthily",
+     "pos": "adv",
+     "ko": "몰래, 살금살금",
+     "def": "in a quiet, secret way"
+    },
+    {
+     "w": "naught",
+     "pos": "noun",
+     "ko": "무, 없음",
+     "def": "nothing"
+    },
+    {
+     "w": "candid",
+     "pos": "adj",
+     "ko": "솔직한",
+     "def": "open and honest in speech"
+    },
+    {
+     "w": "gaunt",
+     "pos": "adj",
+     "ko": "수척한, 여윈",
+     "def": "thin and hollow from pain or hunger"
+    }
+   ],
+   "check": [
+    [
+     "Words like \"love\" have become almost ___ in the community — used, but drained of real meaning.",
+     "obsolete"
+    ],
+    [
+     "The memory of war filled Jonas with ___ as he watched a wounded boy beg for water.",
+     "agony"
+    ],
+    [
+     "The Giver stayed ___ during the hardest memories, ready to take some of the pain back.",
+     "vigilant"
+    ],
+    [
+     "The community's leaders ___ pain on no one openly — yet release quietly ends lives.",
+     "inflict"
+    ],
+    [
+     "Jonas's father spoke so ___ and gently that no one guessed what the injection would do.",
+     "stealthily"
+    ],
+    [
+     "For the first time, Jonas wished his parents had been more ___ with him about the truth.",
+     "candid"
+    ]
+   ],
+   "mc": [
+    {
+     "q": "What does Jonas learn that \"release\" really means?",
+     "opts": [
+      "The person is sent to a warm and distant community.",
+      "The person is put to death by injection.",
+      "The person is given a long, happy vacation.",
+      "The person is moved to the House of the Old."
+     ],
+     "ans": "B",
+     "badge": null
+    },
+    {
+     "q": "Who performs the release of the newborn twin in the recording Jonas watches?",
+     "opts": [
+      "The Chief Elder.",
+      "The Giver.",
+      "Jonas's father.",
+      "A stranger Jonas has never seen."
+     ],
+     "ans": "C",
+     "badge": null
+    },
+    {
+     "q": "When Jonas asks his parents if they love him, they call the word \"love\" meaningless. What does this reveal about the community?",
+     "opts": [
+      "His parents secretly hate him.",
+      "The community has traded away deep feeling for exact, empty language.",
+      "Jonas used the word incorrectly by mistake.",
+      "Love is a word only children are allowed to use."
+     ],
+     "ans": "B",
+     "badge": "infer"
+    },
+    {
+     "q": "Jonas's father speaks kindly to the baby and then kills him. What does this contrast most suggest?",
+     "opts": [
+      "His father is secretly cruel and enjoys it.",
+      "A gentle person can do a terrible thing without knowing what it truly is.",
+      "The baby was never really alive.",
+      "Release is a mistake that happens only once."
+     ],
+     "ans": "B",
+     "badge": "infer"
+    },
+    {
+     "q": "The author places the memory of <i>war</i> and the memory of <i>love</i> close together. Why put these two side by side?",
+     "opts": [
+      "To confuse the reader on purpose.",
+      "To show that the community erased both the worst pain and the deepest love together.",
+      "To prove that war is more important than love.",
+      "To explain the rules of the holiday season."
+     ],
+     "ans": "B",
+     "badge": "intent"
+    }
+   ],
+   "mc_why": [
+    "release의 진짜 뜻은 <b>주사로 목숨을 끝내는 것</b> — 즉 죽음이에요.",
+    "영상 속에서 아기를 release한 사람은 <b>Jonas의 아버지</b>예요.",
+    "love를 무의미한 단어라 부르는 건, 공동체가 <b>깊은 감정을 정확하지만 텅 빈 언어로 바꿔치기</b>했음을 보여줘요.",
+    "다정하게 말한 뒤 아기를 죽여요. <b>친절한 사람도 진실을 모르면 끔찍한 일을 할 수 있다</b>는 뜻이에요.",
+    "전쟁의 기억과 사랑의 기억을 <b>나란히</b> 둬서, 공동체가 <b>최악의 고통과 가장 깊은 사랑을 함께</b> 지웠음을 보여줘요."
+   ],
+   "facts": [
+    "Jonas's father is gentle and loving, yet he performs release. In <b>one or two</b> sentences, explain what this contrast shows about the community.",
+    "After learning what release is, Jonas says he will not go back to his old life. Do you understand his decision? Explain using what he saw in the recording."
+   ],
+   "sa_key": [
+    "it shows that ordinary, kind people can do terrible things when they never learn the truth of what they are doing; ignorance, not cruelty, is the danger.",
+    "열린 문항 — 책 속 근거 1개 + 자기 입장이면 통과."
+   ],
+   "frame": [
+    [
+     "ARGUE",
+     "I argue that <span class='blank lg'></span>"
+    ],
+    [
+     "CONCEDE",
+     "Some may say <span class='blank lg'></span>"
+    ],
+    [
+     "REBUT",
+     "However, <span class='blank lg'></span>"
+    ],
+    [
+     "CONCLUDE",
+     "For this reason, <span class='blank lg'></span>"
+    ]
+   ],
+   "frame_ans": "I argue Jonas was right to leave. Some may say he put a baby in danger. However, the baby would have been killed the next morning.",
+   "act": {
+    "title": "What the Word Hides",
+    "hint": "a gentle word can cover a hard truth",
+    "intro": "The community uses soft words for hard things. Match each community word with what it really means. Circle the true meaning.",
+    "items": [
+     [
+      "\"Release\" for a newborn twin.",
+      "a nap",
+      "killing"
+     ],
+     [
+      "\"Precision of language\" about the word love.",
+      "clear truth",
+      "erasing feeling"
+     ],
+     [
+      "\"Assignment\" of Birthmother.",
+      "high honor",
+      "low-status labor"
+     ],
+     [
+      "\"Elsewhere,\" where the released are said to go.",
+      "a real place",
+      "death"
+     ]
+    ],
+    "ans": "1) killing · 2) erasing feeling · 3) low-status labor · 4) death",
+    "note": "정답이 갈리면 왜 그 단어인지 근거를 물어라."
+   },
+   "think": [
+    [
+     "JUDGE",
+     "Jonas saves one baby, and his leaving forces pain onto a whole community. Is it right to hurt many to save one?"
+    ],
+    [
+     "INTERPRET",
+     "The Giver stays; Jonas leaves. Which choice takes more courage? Pick the harder answer and defend it."
+    ],
+    [
+     "INTERPRET",
+     "The author never tells us for sure whether they survive. Why leave the ending open? What does that ask the reader to do?"
+    ],
+    [
+     "APPLY",
+     "Every freedom costs some safety. Name one freedom you would not trade for safety, and explain the price you accept."
+    ]
+   ],
+   "think_key": [
+    {
+     "both": "옳다 — 확실한 죽음이 불확실한 고통보다 무겁다. ｜ 옳지 않다 — 다수 동의 없이 그들 삶을 바꿀 권한 없다.",
+     "p": "'한 명'과 '다수'를 같은 저울에 올리면 P.",
+     "fail": "감동형 → 되물어라: \"공동체 입장에선 조너스가 뭐지?\""
+    },
+    {
+     "both": "기버 — 남아 결과를 감당하는 게 더 어렵다. ｜ 조너스 — 돌아올 곳 없이 떠나는 게 더 어렵다.",
+     "p": "'용기'를 정의하고 두 사람을 재면 P.",
+     "fail": "\"주인공이니까\" → 되물어라: \"용기가 뭔지 먼저 정해봐.\""
+    },
+    {
+     "both": "독자에게 결정을 넘긴 것. ｜ 떠난 것 자체가 답이라는 뜻.",
+     "p": "열린 결말이 독자에게 시키는 일을 동사로 말하면 P.",
+     "fail": "\"안 정했다\"로 끝난다 → 되물어라: \"왜 안 정했을까? 정했으면 뭐가 달라지지?\""
+    },
+    {
+     "both": "개인 답변. 자유의 종류는 무엇이든. 중요한 건 대가.",
+     "p": "자유 하나를 특정하고 대가를 명명하면 P.",
+     "fail": "\"자유는 소중\"으로 끝난다 → 되물어라: \"그거 지키려고 뭘 감수할 건데?\""
+    }
+   ]
+  }
+ ],
+ "final": {
+  "prompts": [
+   [
+    "A",
+    "Is a life without pain worth living? The community removed pain, and with it color, love, and choice. Decide whether that trade was worth making."
+   ],
+   [
+    "B",
+    "Should people be allowed to choose, even when they may choose badly? Jonas believes they should. The Giver warns they might choose wrong."
+   ],
+   [
+    "C",
+    "Who is responsible for the community's cruelty — the leaders who made the rules, or the citizens who never asked why?"
+   ]
+  ],
+  "thesis_ans": "A — A life without pain is not worth living, because pain teaches wisdom and a world that cannot feel pain cannot feel love.<br>C — The citizens are more responsible, because a rule survives only as long as no one questions it."
+ },
+ "made": "2026-07-16"
+};
+
+drawLib();
+
+/* ===================================================================
+   GRADER — 사진 → 판정
+   등급은 코드가 계산한다. AI에게 등급을 맡기지 않는다.
+   =================================================================== */
+
+const ROLES = ["OPINION","REASON","EVIDENCE","EXPLAIN","COUNTER","CONCLUDE"];
+
+/* 유닛별로 채워져야 하는 스파인 칸 — 누적된다 */
+const EXPECT = [
+  ["OPINION","REASON"],
+  ["OPINION","REASON"],
+  ["OPINION","REASON","EXPLAIN"],
+  ["OPINION","REASON","EVIDENCE","EXPLAIN","CONCLUDE"],
+  ["OPINION","REASON","EVIDENCE","EXPLAIN","COUNTER","CONCLUDE"],
+  ["OPINION","REASON","EVIDENCE","EXPLAIN","COUNTER","CONCLUDE"]
+];
+
+function gradePrompt(pack, unitIdx){
+  const isFinal = unitIdx === 5;
+  const spec = isFinal ? null : LADDER[unitIdx];
+  const u    = isFinal ? null : pack.units[unitIdx];
+
+  const qs = isFinal
+    ? pack.final.prompts.map(([k,q])=>`[${k}] ${q}`).join("\n")
+    : u.think.map(([t,q],i)=>`[${t}] ${q}\n   양쪽 입장: ${u.think_key[i].both}\n   P 조건: ${u.think_key[i].p}`).join("\n\n");
+
+  return `너는 한국 영어학원의 논리 라이팅 첨삭자다. 학생이 손으로 쓴 리포트 사진을 읽고 첨삭한다.
+
+책: "${pack.title}" (${pack.author})
+유닛: ${isFinal ? "06 · Full Argument Essay · 목표 250 words" : spec.no + " · " + spec.logic + " · 목표 " + spec.words + " words"}
+이 유닛에서 채워져야 하는 칸: ${EXPECT[unitIdx].join(" → ")}
+
+학생이 고를 수 있었던 질문:
+${qs}
+
+════════ 이 첨삭이 무엇인지 ════════
+이것은 문법 첨삭이 아니다. 문법이 완벽해도 생각이 얕으면 실패다.
+문법이 엉망이어도 생각이 한 단계 내려갔으면 통과다.
+너는 이 학생이 **생각했는지**를 본다. 영어를 잘 썼는지가 아니다.
+
+════════ 1. 전사 ════════
+- 사진에 보이는 대로 옮긴다. 철자·문법 오류를 고치지 않는다.
+- 글씨를 못 읽으면 지어내지 말고 [판독불가]로 둔다.
+- 백지이거나 답안이 안 보이면 unreadable을 true로 하고 나머지는 비운다.
+
+════════ 2. 문장 지도 (참고용) ════════
+각 문장에 논리 역할 하나를 붙인다. 이건 지도일 뿐 등급이 아니다.
+  OPINION 입장 / REASON 이유 / EVIDENCE 책 속 사건 / EXPLAIN 그 사건이 증명하는 것
+  COUNTER 반대 의견과 반박 / CONCLUDE 닫는 문장 / PLOT 줄거리 재서술 / OFF 기여 없음
+verdict: ok(역할을 해냄) / weak(역할은 맞지만 해내지 못함) / plot(줄거리 재서술)
+note는 weak·plot일 때만. 한 줄. 무엇이 부족한지만.
+
+════════ 3. 사고력 3축 — 등급은 여기서만 나온다 ════════
+아래 3개를 각각 통과/실패로 판정한다. 각 판정마다 근거가 되는 학생 문장을 "따옴표"로 인용한다.
+인용할 문장이 없으면 그건 실패다. 애매하면 실패다.
+
+[1] 주장이 반대할 수 있는 문장인가
+  통과 — 그 문장에 "아니다"라고 말할 사람이 있을 수 있다.
+  실패 — 누구나 동의하는 문장. 예: "Pain is bad." "Friends are important." "The Community is strange."
+  실패 — 입장이 둘이다. "둘 다 맞다"로 끝났다.
+
+[2] 이유가 주장을 한 단계 넘어갔는가
+  통과 — 주장에 없던 새 개념·원리·인과가 등장한다. why의 why로 내려갔다.
+  실패 — 주장을 단어만 바꿔 반복. 예: "because it is important" "because it is very bad"
+  실패 — 이유 문장 자체가 없다.
+
+[3] 근거가 그 이유를 실제로 지지하는가
+  통과 — 책 속 사건이 그 이유가 참임을 보여준다.
+  실패 — 사건은 있으나 이유와 연결되지 않는다. 사건만 나열했다.
+  실패 — 책 속 사건이 없다. 또는 지어낸 사건이다.
+
+════════ 4. 강사 대본 ════════
+이 카드를 읽는 강사는 영어를 읽을 줄만 안다. 영어로 판단하지 못한다.
+강사가 판단할 것을 남기지 마라. 강사는 아래 3줄을 그대로 소리 내어 읽기만 한다.
+- tell : 학생에게 읽어줄 한 줄. 한국어. 무엇이 없는지 하나만. 칭찬을 부풀리지 않는다.
+- ask  : 되물을 질문 한 문장. 한국어. 학생이 생각을 한 단계 내리게 만드는 질문.
+- todo : 다음 주까지 할 것 한 줄. 한국어. 반드시 문장 번호를 지정한다.
+세 줄 모두 한국어다. 영어 단어를 섞지 마라. 학생 문장을 인용할 때만 예외다.
+
+════════ 금지 ════════
+- 등급(P/D/B)을 매기지 마라. 시스템이 계산한다.
+- 문법·철자·시제를 사고력 3축의 근거로 쓰지 마라. grammar 필드에만 적는다.
+- 문법이 틀렸다는 이유로 실패를 주지 마라. 생각이 있으면 통과다.
+- 없는 것을 있다고 하지 마라. 금지 표현: 인상적입니다, 안정적, 탄탄한, 기초가 풍부, 훌륭한 자산, 잘했어요.
+- 감정적·구어적 표현 금지. '훈련' 대신 '연습'.
+
+════════ 출력 ════════ raw JSON만. 마크다운·설명·백틱 금지.
+{
+ "unreadable": false,
+ "question": "학생이 고른 질문 라벨. 예: JUDGE 또는 A. 못 찾으면 '미표기'",
+ "word_count": 0,
+ "sentences": [
+   {"n":1,"text":"학생이 쓴 문장 그대로","role":"OPINION","verdict":"ok","note":""},
+   {"n":2,"text":"...","role":"REASON","verdict":"weak","note":"1번 주장을 단어만 바꿔 반복함"}
+ ],
+ "thinking": [
+   {"name":"주장이 반대할 수 있는 문장인가","pass":true,"why":"\\"학생 문장\\" — 판정 이유 한 줄"},
+   {"name":"이유가 주장을 한 단계 넘었는가","pass":false,"why":"\\"학생 문장\\" — 판정 이유 한 줄"},
+   {"name":"근거가 그 이유를 지지하는가","pass":false,"why":"판정 이유 한 줄"}
+ ],
+ "script": {
+   "tell": "학생에게 그대로 읽을 한 줄. 한국어.",
+   "ask": "되물을 질문 한 문장. 한국어.",
+   "todo": "다음 주까지 할 것 한 줄. 문장 번호 포함. 한국어."
+ },
+ "fix": "다시 쓸 문장 1개만. 'n번 \\"학생 문장\\" → 이렇게 바꿔라: 지시 한 줄'",
+ "grammar": "문법 오류 3개 이하. 등급과 무관. 없으면 빈 문자열."
+}`;
+}
+
+async function callVision(prompt, images){
+  const content = images.map(d => ({
+    type:"image",
+    source:{ type:"base64", media_type:d.mime, data:d.b64 }
+  }));
+  content.push({ type:"text", text: prompt });
+  const txt = await eplAskText(prompt, { images, modelTier:"complex" });
+  const clean = txt.replace(/```json|```/g,"").trim();
+  const a = clean.indexOf("{"), b = clean.lastIndexOf("}");
+  if(a<0||b<0) throw new Error("JSON 파싱 실패");
+  return JSON.parse(clean.slice(a,b+1));
+}
+
+function toB64(file){
+  return new Promise((res,rej)=>{
+    const r = new FileReader();
+    r.onload = () => res({ mime:file.type, b64:r.result.split(",")[1] });
+    r.onerror = () => rej(new Error(file.name + " 읽기 실패"));
+    r.readAsDataURL(file);
+  });
+}
+
+/* ---- 스파인 매핑: AI가 붙인 역할표에서 코드가 계산한다 ---- */
+function mapSpine(sentences, unitIdx){
+  const filled = {};
+  ROLES.forEach(r => {
+    const hit = sentences.filter(s => s.role===r && s.verdict==="ok");
+    filled[r] = { ok: hit.length>0, ns: hit.map(s=>s.n),
+                  weak: sentences.some(s=>s.role===r && s.verdict==="weak"),
+                  need: EXPECT[unitIdx].includes(r) };
+  });
+  return filled;
+}
+
+/* ---- 등급: 사고력 3축에서만 나온다. 구조·문법은 등급에 들어가지 않는다 ---- */
+function computeGrade(r, unitIdx){
+  const sp = mapSpine(r.sentences, unitIdx);
+  const t  = r.thinking || [];
+  const n  = t.filter(c=>c.pass).length;
+  return { grade: n===3 ? "P" : n===2 ? "D" : "B", passed:n, thinking:t, sp };
+}
+
+function cardHTML(r, meta, unitIdx){
+  const { grade, passed, thinking, sp } = computeGrade(r, unitIdx);
+  const label = { P:"PROFICIENT", D:"DEVELOPING", B:"BEGINNING" }[grade];
+  const plots = r.sentences.filter(s=>s.verdict==="plot").length;
+  const sc = r.script || {};
+
+  const spineBar = ROLES.map(k=>{
+    const c = sp[k];
+    const cls = c.ok ? "f" : (c.need ? "x" : "n");
+    const tip = c.ok ? c.ns.join(",") : (c.need ? "없음" : "—");
+    return `<div class="${cls}"><b>${k}</b><span>${tip}</span></div>`;
+  }).join("");
+
+  const rows = r.sentences.map(s=>`
+    <div class="sr ${s.verdict}">
+      <span class="sn">${s.n}</span>
+      <span class="sg ${s.role}">${s.role}</span>
+      <span class="st">${esc(s.text)}${s.note?`<em>${esc(s.note)}</em>`:""}</span>
+    </div>`).join("");
+
+  return `<div class="card">
+    <div class="ch">
+      <span class="who">${esc(meta.name || "이름 미기재")}</span>
+      <span class="grade g-${grade}">${grade}<small>${label} · 사고력 ${passed}/3</small></span>
+      <span class="meta">${esc(meta.book)} · UNIT ${meta.unit} · 질문 ${esc(r.question||"미표기")} · ${r.word_count||0} words / 목표 ${meta.target}</span>
+    </div>
+
+    <div class="script">
+      <b>강사 대본 — 이 3줄만 읽으세요. 판단하지 마세요.</b>
+      <div class="sl"><span class="k">① 학생에게</span><span class="v">"${esc(sc.tell||"—")}"</span></div>
+      <div class="sl"><span class="k">② 되물어라</span><span class="v">"${esc(sc.ask||"—")}"</span></div>
+      <div class="sl"><span class="k">③ 다음 주까지</span><span class="v">${esc(sc.todo||"—")}</span></div>
+    </div>
+
+    <div class="checks think">
+      <div class="th">사고력 3축 — 등급은 여기서만 나옵니다. 문법은 등급에 들어가지 않습니다.</div>
+      ${thinking.map(c=>`
+      <div class="cr"><span class="mk ${c.pass?'y':'n'}">${c.pass?'✓':'✗'}</span>
+        <span class="cn">${esc(c.name)}</span>
+        <span class="cw">${esc(c.why)}</span></div>`).join("")}</div>
+
+    <details class="ref"><summary>참고 — 문장 지도 · 다시 쓸 문장 · 문법 <span>강사는 안 읽어도 됩니다</span></summary>
+      <div class="spinemap"><b>논리 스파인 — 이 유닛에서 채워야 할 칸</b><div class="sb">${spineBar}</div></div>
+      <div class="marked"><b>문장별 첨삭 — 전사는 오류 그대로</b>${rows}
+        ${plots?`<div class="plotwarn">줄거리 재서술 ${plots}문장. RULE 4 — 줄거리를 다시 쓰면 점수가 없다.</div>`:""}
+      </div>
+      <div class="act-rows">
+        <div class="ar"><div class="al">다시 쓸 문장 1개</div><div class="av">${esc(r.fix||"—")}</div></div>
+        <div class="ar gr"><div class="al">문법 · 등급 무관</div><div class="av">${esc(r.grammar||"오류 없음. 밑줄만 긋고 넘어간다.")}</div></div>
+      </div>
+    </details>
+  </div>`;
+}
+
+/* ---------- 채점 UI ---------- */
+function drawGradeBooks(){
+  const packs = load(), sel = document.getElementById("gBook");
+  const keys = Object.keys(packs);
+  sel.innerHTML = keys.length
+    ? keys.map(k=>`<option value="${k}" ${k===current?"selected":""}>${packs[k].title}</option>`).join("")
+    : `<option value="">— 저장된 책 없음 —</option>`;
+}
+
+document.getElementById("gFiles").onchange = e => {
+  const t = document.getElementById("gThumbs");
+  t.innerHTML = "";
+  [...e.target.files].forEach(f=>{
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(f); t.appendChild(img);
+  });
+};
+
+const gLog = document.getElementById("gLog");
+function gsay(m, cls){ gLog.innerHTML += `<div class="${cls||''}">${m}</div>`; gLog.scrollTop = gLog.scrollHeight; }
+
+document.getElementById("btnGrade").onclick = async () => {
+  const key = document.getElementById("gBook").value;
+  const packs = load();
+  if(!key || !packs[key]){ alert("먼저 책을 생성하거나 불러오십시오."); return; }
+  const files = [...document.getElementById("gFiles").files];
+  if(!files.length){ alert("답안지 사진을 올리십시오."); return; }
+
+  const pack = packs[key];
+  const ui = parseInt(document.getElementById("gUnit").value, 10);
+  const btn = document.getElementById("btnGrade");
+  btn.disabled = true; gLog.innerHTML = "";
+  gsay(`${pack.title} · UNIT ${ui===5?"06":LADDER[ui].no} · 사진 ${files.length}장 첨삭 중 ...`);
+
+  try {
+    const imgs = await Promise.all(files.map(toB64));
+    const r = await callVision(gradePrompt(pack, ui), imgs);
+
+    if(r.unreadable){
+      gsay("판독 실패 — 글씨가 보이지 않습니다. 밝은 곳에서 답안지를 정면으로 다시 찍으십시오.", "er");
+      return;
+    }
+    if(!Array.isArray(r.sentences) || !r.sentences.length) throw new Error("문장을 하나도 읽지 못했습니다.");
+    if(!Array.isArray(r.thinking) || r.thinking.length!==3) throw new Error("사고력 3축 판정이 없습니다.");
+    if(!r.script || !r.script.tell || !r.script.ask) throw new Error("강사 대본이 없습니다.");
+
+    const meta = {
+      name: document.getElementById("gName").value.trim(),
+      book: pack.title,
+      unit: ui===5 ? "06" : LADDER[ui].no,
+      target: ui===5 ? "250 w" : LADDER[ui].words + " w"
+    };
+    document.getElementById("cards").insertAdjacentHTML("afterbegin", cardHTML(r, meta, ui));
+    const g = computeGrade(r, ui);
+    gsay(`첨삭 완료 — ${g.grade} · 사고력 ${g.passed}/3 · 문장 ${r.sentences.length}개`, "ok");
+    gsay("전사가 실제와 다르면 첨삭도 틀립니다. 문장별 첨삭의 전사문을 먼저 확인하십시오.");
+    document.getElementById("gName").value = "";
+    document.getElementById("gFiles").value = "";
+    document.getElementById("gThumbs").innerHTML = "";
+    document.getElementById("cards").scrollIntoView({behavior:"smooth"});
+  } catch(err){
+    gsay("실패 — " + err.message, "er");
+  } finally { btn.disabled = false; }
+};
+
+document.getElementById("btnClearCards").onclick = () => {
+  if(document.getElementById("cards").innerHTML && confirm("첨삭 카드를 모두 지웁니다."))
+    document.getElementById("cards").innerHTML = "";
+};
+
+drawGradeBooks();
+
+/* ---------- 00 · 연결: 저장 / 연결 테스트 (핸들러 누락 복구) ---------- */
+(function(){
+  const fEp=document.getElementById("fEp");
+  const epLog=document.getElementById("epLog");
+  const btnSave=document.getElementById("btnEpSave");
+  const btnTest=document.getElementById("btnEpTest");
+  function epSay(msg,cls){ if(epLog) epLog.innerHTML='<div class="'+(cls||'')+'">'+msg+'</div>'; }
+  try{ const cur=(localStorage.getItem(EP_KEY)||"").trim(); if(cur&&fEp) fEp.value=cur; }catch(e){}
+  if(btnSave) btnSave.onclick=()=>{
+    const v=(fEp.value||"").trim();
+    if(!v){ epSay("주소를 입력하십시오.","er"); return; }
+    if(!/^https:\/\//i.test(v)){ epSay("https:// 로 시작하는 워커 주소여야 합니다.","er"); return; }
+    try{ localStorage.setItem(EP_KEY,v); }catch(e){}
+    epSay('저장됨 — '+v+'  · [연결 테스트]를 눌러 확인하십시오.',"ok");
+  };
+  if(btnTest) btnTest.onclick=async()=>{
+    const v=(fEp.value||"").trim()||(localStorage.getItem(EP_KEY)||"").trim();
+    if(!v){ epSay("먼저 주소를 넣고 [저장]하십시오.","er"); return; }
+    epSay("연결 확인 중 …");
+    try{
+      const r=await fetch(v,{method:"POST",headers:{"Content-Type":"application/json","X-EPL-Task":"generate"},
+        body:JSON.stringify({model:MODEL,max_tokens:16,messages:[{role:"user",content:"Reply with the single word: ok"}]})});
+      const t=await r.text();
+      if(r.ok&&/\bok\b/i.test(t)) epSay('연결 성공 — 모델 응답: "ok"',"ok");
+      else epSay("응답 "+r.status+": "+t.slice(0,200),"er");
+    }catch(e){ epSay("연결 실패: "+e.message,"er"); }
+  };
+})();
+
+/* ---------- 책 사실 점검: 안 읽고도 유닛↔책 일치 확인 ---------- */
+(function(){
+  const btn=document.getElementById("btnVerify");
+  const logEl=document.getElementById("log");
+  if(!btn) return;
+  const show=(m,c)=>{ if(logEl) logEl.innerHTML='<div class="'+(c||'')+'" style="white-space:normal;line-height:1.6">'+m+'</div>'; };
+  const esc2=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  btn.onclick=async()=>{
+    const title=(document.getElementById("fTitle").value||"").trim();
+    const author=(document.getElementById("fAuthor").value||"").trim();
+    if(!title){ show("먼저 책 제목을 넣으십시오.","er"); return; }
+    show("책 사실 점검 중 … (약 15초)");
+    const prompt=`너는 다음 책을 아는지 스스로 정직하게 평가하고, 아는 만큼만 사실을 요약하는 검증 도우미다.
+책: "${title}"${author? " / 저자: "+author : ""}
+
+아래 형식의 한국어로만 답하라. 모르면 모른다고 하라. 절대 지어내지 마라. 마크다운 기호(#, *) 금지.
+
+[확신도] 확실 / 보통 / 불확실 중 하나 — 이 책의 줄거리와 인물을 확실히 아는가
+[저자] 실제 저자 (입력한 저자와 다르면 지적)
+[한줄 개요] 이 책이 어떤 이야기인지 한 문장
+[주요 인물] 3~5명, 각 한 줄
+[구성] 대략 몇 개의 챕터/부로 나뉘는지
+[줄거리 순서] 시작→끝 핵심 사건 6~8개를 순서대로 한 줄씩 (워크북 6개 유닛이 이 순서를 따라야 함)
+[주의] 확신도가 '불확실'이면 "이 책은 AI가 잘 몰라 생성 내용이 부정확할 수 있습니다. 사용하지 마세요."라고 반드시 쓸 것`;
+    try{
+      let txt; try{ txt=(await eplAskText(prompt,{modelTier:"default"})).trim(); }
+      catch(e){ show("점검 실패 — "+((e&&e.message)||e),"er"); return; }
+      if(!txt){ show("응답이 비었습니다. 다시 시도하십시오.","er"); return; }
+      const uncertain=/불확실/.test(txt) || /사용하지 마세요/.test(txt);
+      const head=uncertain
+        ? '⚠️ 이 책은 AI가 확실히 알지 못합니다 — 유닛이 지어냈을 수 있으니 <b>사용을 권하지 않습니다.</b><br><br>'
+        : '✅ 참고용 사실 요약입니다. 생성된 유닛의 챕터·사건이 아래 [줄거리 순서]와 맞는지 대조하세요. (더 확실히 하려면 나무위키·위키백과로 한 번 더 확인)<br><br>';
+      logEl.innerHTML='<div class="'+(uncertain?"er":"ok")+'" style="white-space:normal;line-height:1.6">'+head+esc2(txt).replace(/\n/g,"<br>")+'</div>';
+    }catch(e){ show("점검 실패: "+esc2(e.message),"er"); }
+  };
+})();
+
+/* ---------- 강사 지도 대본: 책 안 읽고도 지도 ---------- */
+(function(){
+  const btn=document.getElementById("btnScript");
+  if(!btn) return;
+  const e3=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const nl=s=>e3(s).replace(/\n/g,"<br>");
+
+  function unitHTML(no, ch, logic, sub, facts, facts_ans, think, think_key){
+    let tk="";
+    (think||[]).forEach((t,j)=>{
+      const q=Array.isArray(t)?t[1]:t, typ=Array.isArray(t)?t[0]:"";
+      const k=(think_key&&think_key[j])||{};
+      tk+=`<div class="sc-q"><div class="sc-ql">Q${j+1} ${e3(typ)} — ${e3(q)}</div>`
+        +`<div class="sc-r"><span>양쪽 입장</span>${e3(k.both||"—")}</div>`
+        +`<div class="sc-r"><span>P 주는 조건</span>${e3(k.p||"—")}</div>`
+        +`<div class="sc-r sc-fail"><span>얕은 답 → 되물어라</span>${e3(k.fail||"—")}</div></div>`;
+    });
+    return `<section class="page sc-page">
+      <div class="sc-h"><b>UNIT ${e3(no)}</b> · ${e3(ch||"")} · <span class="sc-logic">${e3(logic||"")}</span></div>
+      <div class="sc-goal"><b>논리 목표</b> · ${e3(sub||logic||"")}</div>
+      <div class="sc-block"><div class="sc-t">① 도입 멘트</div>
+        <p class="sc-p"><span class="sc-kr">강사 이해</span> 오늘은 이 책의 <b>${e3(ch||"이 부분")}</b>으로 '${e3(logic||"")}'를 연습합니다. 줄거리를 다시 말하는 게 아니라 <b>내 생각을 근거와 함께</b> 문장으로 만드는 게 목표예요.</p>
+        <p class="sc-p sc-en"><span class="sc-tag-en">학생에게</span> "Today we use <b>${e3(ch||"this part")}</b> to practice <b>${e3(logic||"")}</b>. Don't retell the story — share your own opinion and back it up with a reason."</p></div>
+      <div class="sc-block"><div class="sc-t">② 사실 확인 — 강사가 짚어줄 것 (정답 있음)</div>
+        ${(facts||[]).map((q,i)=>`<div class="sc-fact">${i+1}. ${e3(q)}</div>`).join("")}
+        <div class="sc-ans"><b>강사용 정답</b> · ${nl(facts_ans||"")}</div></div>
+      <div class="sc-block"><div class="sc-t">③ 사고 질문 토론 대본 — 학생이 고른 1개를 이렇게 굴리세요</div>${tk||"<p>—</p>"}</div>
+      <div class="sc-block"><div class="sc-t">④ 학생에게 쓸 영어 표현 — 생각을 밀어붙일 때</div>
+        <div class="sc-en-list">
+          <div class="sc-en">"What do you think? Choose one side."</div>
+          <div class="sc-en">"Why? Give me one reason."</div>
+          <div class="sc-en">"Where in the book? Name the event."</div>
+          <div class="sc-en">"What would the other side say?"</div>
+          <div class="sc-en">"Say more — one more sentence."</div>
+        </div>
+        <p class="sc-en-note">얕은 답이 나오면 위 영어 표현으로 되물어 더 깊게 끌어내세요.</p></div>
+      <div class="sc-block sc-note">정답을 주지 마세요. 학생이 입장을 정하고 이유를 대게 하세요. 문법은 지적하지 말고 밑줄만. 얕게 끝나면 위 '되물어라'를 던지세요.</div>
+    </section>`;
+  }
+
+  btn.onclick=async()=>{
+    const packs=load(), k=current;
+    if(!k||!packs[k]){ alert("먼저 라이브러리에서 책을 선택(또는 생성)하십시오."); return; }
+    const pack=packs[k], sheet=document.getElementById("sheet");
+    document.getElementById("btnPrint").disabled=false;
+    sheet.innerHTML='<section class="page sc-page"><div class="sc-loading">강사 지도 대본 만드는 중 … 책 개관을 불러옵니다 (약 15초)</div></section>';
+    sheet.scrollIntoView({behavior:"smooth"});
+    const ov=`너는 한국 영어학원의 '사고력 영어' 강사가 이 책을 읽지 않고도 다 읽고 이해한 것처럼 학생을 지도하도록 돕는 대본 작가다.
+책: "${pack.title}"${pack.author&&pack.author!=="—"?" / "+pack.author:""} · 학생 수준: ${pack.level||""}
+
+한국어로만, 마크다운 기호(#,*) 없이 아래 라벨 형식 그대로 써라. 모르면 모른다고 하고 절대 지어내지 마라.
+
+[확신도] 확실 / 보통 / 불확실 중 하나
+[한 문장 소개] 학생에게 이 책을 소개하는 한 문장 멘트
+[줄거리 3단] 시작 / 중간 / 끝 을 각각 2~3문장으로. 강사가 통째로 말할 수 있게.
+[주요 인물] 이름 — 한 줄 설명, 3~5명
+[핵심 논점] 이 책이 던지는 생각거리 2~3개
+[학생 질문 대비] 학생이 물어볼 법한 질문 3개와 강사가 답할 한 줄씩
+[사고력 여는 법] 이 책으로 학생 생각을 밀어붙이는 팁 3줄
+[학생용 영어 소개] 학생에게 이 책을 소개하는 쉬운 영어 한두 문장 (강사가 그대로 읽을 수 있게)
+[학생에게 쓸 영어 표현] 토론에서 학생에게 던지는 짧은 영어 표현 5개 (각 한 줄, 영어로)
+[주의] 확신도가 불확실이면 "이 책은 AI 정보가 부정확할 수 있으니 수업 전 직접 확인하세요"라고 쓸 것`;
+    let overview="";
+    try{
+      let ovTxt; try{ ovTxt=await eplAskText(ov,{modelTier:"default"}); }
+      catch(err){ sheet.innerHTML='<section class="page sc-page"><div class="sc-loading" style="color:#9B2C2C">개관 실패: '+e3((err&&err.message)||err)+'</div></section>'; return; }
+      overview=(ovTxt||"").trim()
+        .replace(/\*\*/g,"").replace(/`/g,"").replace(/^#{1,6}\s*/gm,"").replace(/^\s*[-*]\s+/gm,"· ");
+    }catch(err){ sheet.innerHTML='<section class="page sc-page"><div class="sc-loading" style="color:#9B2C2C">개관 실패: '+e3(err.message)+'</div></section>'; return; }
+    const uncertain=/불확실/.test(overview);
+    let html=`<section class="page sc-page">
+      <div class="sc-cover"><div class="sc-brand">EPL · 강사 지도 대본</div><h2>${e3(pack.title)}</h2><div class="sc-sub">${e3(pack.author||"")} · ${e3(pack.level||"")}</div></div>
+      ${uncertain?'<div class="sc-warn">⚠️ AI가 이 책을 확실히 알지 못합니다. 아래 내용이 부정확할 수 있으니 수업 전 직접 확인하세요.</div>':''}
+      <div class="sc-block sc-ov">${nl(overview)}</div>
+      <div class="sc-block sc-note">수업 운영 원칙 · ① 정답을 주지 않는다 ② 문법은 등급에 넣지 않는다(밑줄만) ③ 30초 판단 — 입장이 하나인가 · 이유가 새 정보인가 · 책 속 사건이 1개 들어갔는가.</div>
+    </section>`;
+    (pack.units||[]).forEach((u,i)=>{
+      const spec=(typeof LADDER!=="undefined"&&LADDER[i])?LADDER[i]:{no:String(i+1).padStart(2,"0"),logic:"",sub:""};
+      html+=unitHTML(spec.no,u.ch,spec.logic,spec.sub,u.facts,u.facts_ans,u.think,u.think_key);
+    });
+    if(pack.final){
+      const f=pack.final;
+      html+=`<section class="page sc-page">
+        <div class="sc-h"><b>UNIT 06</b> · FINAL ESSAY · <span class="sc-logic">5문단 논증</span></div>
+        <div class="sc-block"><div class="sc-t">최종 에세이 — 3개 논제 중 1개 선택</div>
+          ${(f.prompts||[]).map(p=>`<div class="sc-fact"><b>${e3(Array.isArray(p)?p[0]:"")}</b> ${e3(Array.isArray(p)?p[1]:p)}</div>`).join("")}
+          <div class="sc-ans"><b>모범 주제문(강사용)</b> · ${nl(f.thesis_ans||"")}</div></div>
+        <div class="sc-block sc-note">앞 5개 유닛 구조(주장→이유→근거→반론→결론)를 하나의 5문단 글로 합칩니다. '쉬운 논제' 말고 '답이 갈리는 논제'를 고르게 하세요.</div>
+      </section>`;
+    }
+    sheet.innerHTML=html;
+    sheet.scrollIntoView({behavior:"smooth"});
+  };
+})();
+
+</script>
+</body>
+</html>
