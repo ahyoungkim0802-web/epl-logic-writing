@@ -221,6 +221,25 @@ body{
 
 .modebtn{background:transparent;color:#fff;border:1px solid #6b6862;padding:8px 12px;border-radius:2px;cursor:pointer;font:600 12px/1 system-ui,'Pretendard',sans-serif;letter-spacing:.02em}
 .modebtn.on{background:#fff;color:var(--ink)}
+/* ===== 비밀번호 잠금 ===== */
+#gate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#20333f,#162530);font-family:system-ui,'Pretendard','Malgun Gothic',sans-serif}
+#gate .gatebox{width:320px;max-width:86vw;background:#f4f1ea;border-radius:12px;padding:30px 26px;box-shadow:0 20px 60px rgba(0,0,0,.4);text-align:center}
+#gate .gtitle{font:700 17px/1.2 system-ui,'Pretendard',sans-serif;color:#20303b;letter-spacing:.02em}
+#gate .gsub{font-size:12px;color:#6f685c;margin:6px 0 16px}
+#gate input[type=password],#gate input[type=text]{width:100%;padding:11px 12px;border:1px solid #d9d5cc;border-radius:8px;font-size:14px;background:#fff;color:#1a1a1a;margin-bottom:10px}
+#gate input:focus{outline:none;border-color:#a8843f}
+#gate button{width:100%;padding:11px;border:0;border-radius:8px;background:#20303b;color:#fff;font:700 13px/1 system-ui,sans-serif;cursor:pointer}
+#gate button:hover{background:#0e1a22}
+#gate .gerr{color:#b23a2e;font-size:12px;min-height:16px;margin-top:8px}
+#gate .glink{width:auto;background:none;color:#8f887b;font-weight:600;font-size:11px;margin-top:12px;padding:4px}
+#gate .glink:hover{background:none;color:#a8843f;text-decoration:underline}
+#gate .gadmin{margin-top:14px;padding-top:14px;border-top:1px solid #d9d5cc;text-align:left}
+#gate .gsub2{font-size:12px;font-weight:700;color:#20303b;margin-bottom:8px}
+#gate textarea{width:100%;height:56px;padding:8px;border:1px solid #d9d5cc;border-radius:8px;font:11px/1.4 ui-monospace,monospace;background:#fff;color:#1a1a1a;resize:none;margin-bottom:8px;word-break:break-all}
+#gate .gbtn2{background:#a8843f}
+#gate .gbtn2:hover{background:#946f32}
+#gate .gnote{font-size:10.5px;line-height:1.55;color:#8f887b;margin-top:8px}
+@media print{ #gate{display:none!important} }
 #cbFrame{width:100%;height:calc(100vh - 58px);border:0;display:block;background:#eceae4}
 @media print{
   body{background:#fff;padding:0}
@@ -475,6 +494,49 @@ details.ref>div:last-child{padding-bottom:12px}
 </style>
 </head>
 <body>
+<div id="gate">
+  <div class="gatebox">
+    <div class="gtitle">EPL Logic Writing</div>
+    <div class="gsub">비밀번호를 입력하세요</div>
+    <input id="gpw" type="password" autocomplete="off" placeholder="비밀번호">
+    <button id="gbtn">들어가기</button>
+    <div id="gerr" class="gerr"></div>
+    <button id="gadminLink" class="glink">비밀번호 바꾸기 (관리자)</button>
+    <div id="gadmin" class="gadmin" style="display:none">
+      <div class="gsub2">새 비밀번호 → 해시 생성</div>
+      <input id="gnew" type="text" autocomplete="off" placeholder="새 비밀번호 입력">
+      <button id="ggen" class="gbtn2">해시 만들기</button>
+      <textarea id="ghash" readonly placeholder="생성된 해시가 여기 표시됩니다"></textarea>
+      <button id="gcopy" class="gbtn2">해시 복사</button>
+      <div class="gnote">이 해시를 index.html 맨 위 <b>EPL_GATE_HASH</b> 값으로 바꿔 GitHub에 커밋하면 비밀번호가 변경됩니다. 변경하면 모든 기기에서 다시 로그인해야 합니다.</div>
+    </div>
+  </div>
+</div>
+<script>
+/* ===== EPL 비밀번호 잠금 — 변경 시 아래 EPL_GATE_HASH 값만 교체 ===== */
+(function(){
+  var EPL_GATE_HASH = "62a797b2e0f5ad663568edf2e838e64fad8008988e5178049d65dabe9dbce7f1";
+  var GKEY="epl_gate_token";
+  function sha(s){ return crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)).then(function(b){
+    return Array.prototype.map.call(new Uint8Array(b),function(x){return x.toString(16).padStart(2,"0");}).join(""); }); }
+  var gate=document.getElementById("gate");
+  function unlock(){ gate.style.display="none"; document.body.style.overflow=""; }
+  try{ if(localStorage.getItem(GKEY)===EPL_GATE_HASH){ unlock(); } }catch(e){}
+  document.body.style.overflow="hidden";
+  var pw=document.getElementById("gpw"), btn=document.getElementById("gbtn"), err=document.getElementById("gerr");
+  function tryEnter(){ err.textContent=""; sha(pw.value).then(function(hh){
+    if(hh===EPL_GATE_HASH){ try{ localStorage.setItem(GKEY,hh); }catch(e){} unlock(); }
+    else { err.textContent="비밀번호가 올바르지 않습니다."; try{pw.select();}catch(e){} } }); }
+  btn.onclick=tryEnter;
+  pw.addEventListener("keydown",function(e){ if(e.key==="Enter") tryEnter(); });
+  var al=document.getElementById("gadminLink"), ad=document.getElementById("gadmin");
+  al.onclick=function(){ ad.style.display = (ad.style.display==="none"?"block":"none"); };
+  var gnew=document.getElementById("gnew"), ggen=document.getElementById("ggen"), ghash=document.getElementById("ghash"), gcopy=document.getElementById("gcopy");
+  ggen.onclick=function(){ if(!gnew.value){ return; } sha(gnew.value).then(function(hh){ ghash.value=hh; }); };
+  gcopy.onclick=function(){ if(!ghash.value) return; if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(ghash.value).then(function(){ gcopy.textContent="복사됨 ✓"; setTimeout(function(){gcopy.textContent="해시 복사";},1500); }); } else { ghash.select(); try{document.execCommand("copy");}catch(e){} } };
+  setTimeout(function(){ try{ pw.focus(); }catch(e){} }, 120);
+})();
+</script>
 <div class="app">
 
 <div class="topbar">
