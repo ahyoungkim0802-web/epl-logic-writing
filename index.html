@@ -219,9 +219,13 @@ body{
 .ak .akw{line-height:1.5;color:var(--body)}
 .ak .akw b{color:var(--navy)}
 
+.modebtn{background:transparent;color:#fff;border:1px solid #6b6862;padding:8px 12px;border-radius:2px;cursor:pointer;font:600 12px/1 system-ui,'Pretendard',sans-serif;letter-spacing:.02em}
+.modebtn.on{background:#fff;color:var(--ink)}
+#cbFrame{width:100%;height:calc(100vh - 58px);border:0;display:block;background:#eceae4}
 @media print{
   body{background:#fff;padding:0}
   .toolbar{display:none}
+  #coverRoot{display:none!important}
   .page{box-shadow:none;margin:0;page-break-after:always;min-height:297mm}
   .page:last-child{page-break-after:auto}
   @page{size:A4;margin:0}
@@ -475,9 +479,12 @@ details.ref>div:last-child{padding-bottom:12px}
 
 <div class="topbar">
   <h1>EPL Logic Writing Generator · Online</h1>
+  <button id="mWork" class="modebtn on">워크북</button>
+  <button id="mCover" class="modebtn">표지 만들기</button>
   <button id="btnTeacher" aria-pressed="false">교사 진행면 포함</button>
   <button id="btnPrint" disabled>인쇄</button>
 </div>
+<div id="workRoot">
 
 <!-- ========== 0. 연결 ========== -->
 <div class="panel" id="connPanel" style="display:none">
@@ -581,6 +588,298 @@ details.ref>div:last-child{padding-bottom:12px}
 </div>
 
 <div class="sheet" id="sheet"></div>
+</div><!-- /workRoot -->
+<div id="coverRoot" style="display:none">
+  <iframe id="cbFrame" title="표지 만들기" srcdoc="<!doctype html>
+<html lang=&quot;ko&quot;>
+<head>
+<meta charset=&quot;utf-8&quot;>
+<meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1, viewport-fit=cover&quot;>
+<title>EPL Cover Builder</title>
+<link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;>
+<link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin>
+<link href=&quot;https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,400..600&amp;display=swap&quot; rel=&quot;stylesheet&quot;>
+<script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js&quot;></script>
+<style>
+:root{
+  --gold:#a8843f; --uibg:#eceae4; --uiln:#d9d5cc; --ui:#22303a;
+  --sans:'Pretendard','Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',system-ui,sans-serif;
+  --serif:'Fraunces',Georgia,'Times New Roman',serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--uibg);color:#1a1a1a;font-family:var(--sans);display:flex;min-height:100vh}
+
+/* ---------- controls ---------- */
+.panel{width:330px;flex:none;background:#fff;border-right:1px solid var(--uiln);padding:22px 20px;height:100vh;overflow:auto;position:sticky;top:0}
+.panel h1{font:700 15px/1.3 var(--sans)}
+.panel .sub{font-size:11px;color:#8a8a8a;margin:2px 0 18px}
+.fld{margin-bottom:14px}
+.fld label{display:block;font-size:11px;font-weight:600;color:#555;letter-spacing:.04em;margin-bottom:5px;text-transform:uppercase}
+.fld input[type=text]{width:100%;padding:9px 11px;border:1px solid var(--uiln);border-radius:7px;font:400 13px/1.3 var(--sans);color:#1a1a1a;background:#fbfaf8}
+.fld input:focus{outline:none;border-color:var(--gold)}
+.drop{border:1.5px dashed #c3bfb4;border-radius:9px;padding:22px 12px;text-align:center;cursor:pointer;background:#fbfaf8;transition:.15s}
+.drop:hover,.drop.hot{border-color:var(--gold);background:#fdf7ec}
+.drop .big{font-size:13px;font-weight:600;color:#3a3a3a}
+.drop .sm{font-size:11px;color:#9a9a9a;margin-top:4px}
+.seg{display:flex;border:1px solid var(--uiln);border-radius:7px;overflow:hidden}
+.seg button{flex:1;padding:8px 0;border:0;background:#fbfaf8;font:600 12px/1 var(--sans);color:#666;cursor:pointer}
+.seg button.on{background:var(--ui);color:#fff}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;color:#333;cursor:pointer;user-select:none;padding:4px 0}
+.chk input{width:15px;height:15px;accent-color:var(--gold)}
+.actions{margin-top:20px;display:flex;flex-direction:column;gap:9px}
+.btn{padding:12px;border:0;border-radius:8px;font:700 13px/1 var(--sans);letter-spacing:.03em;cursor:pointer}
+.btn.save{background:var(--gold);color:#fff}
+.btn.save:hover{background:#946f32}
+.btn.print{background:var(--ui);color:#fff}
+.btn.print:hover{background:#0e1a22}
+.btn.ghost{background:#fff;color:#444;border:1px solid var(--uiln)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.hint{font-size:11px;color:#a0a0a0;line-height:1.6;margin-top:12px}
+.note{font-size:11px;line-height:1.55;margin-top:10px;padding:9px 11px;border-radius:7px;background:#f4f1ea;color:#6f685c;display:none}
+.note.show{display:block}
+.divider{height:1px;background:var(--uiln);margin:18px 0}
+
+/* ---------- stage ---------- */
+.stage{flex:1;display:flex;align-items:flex-start;justify-content:center;padding:34px;overflow:auto}
+.scaler{transform-origin:top center}
+
+/* ---------- the A4 cover ---------- */
+.cover{
+  --bg:#f4f1ea; --ink:#20303b; --soft:#6f685c; --faint:#a9a094; --line:rgba(20,20,20,.20);
+  --shadow:0 12mm 30mm -10mm rgba(35,28,16,.28);
+  position:relative;width:210mm;height:297mm;overflow:hidden;background:var(--bg);color:var(--ink);
+  box-shadow:0 10px 40px rgba(0,0,0,.22)}
+.cover.dark{
+  --bg:#1b2d3a; --ink:#f2efe8; --soft:#b5ae9f; --faint:#7e8a92; --line:rgba(255,255,255,.28);
+  --shadow:0 12mm 32mm -10mm rgba(0,0,0,.55);
+  background:linear-gradient(180deg,#20333f,#162530)}
+.wrap{position:absolute;inset:0;display:flex;flex-direction:column;padding:13mm 15mm}
+
+.c-top{flex:none;text-align:center;margin-bottom:5mm}
+.mark{font-size:7.6pt;letter-spacing:.4em;color:var(--soft);font-weight:600}
+.mark .g{color:var(--gold)}
+.toprule{width:13mm;height:.4mm;background:var(--gold);margin:3.5mm auto 0;opacity:.9}
+
+.c-mid{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;min-height:0}
+.kick{font-size:8pt;letter-spacing:.3em;color:var(--faint);font-weight:600;margin-bottom:5mm}
+.kick:empty{display:none}
+.artwrap{display:inline-block;line-height:0;box-shadow:var(--shadow);border-radius:1mm}
+.art{display:block;height:214mm;width:auto;max-width:182mm;border-radius:1mm}
+.art.cover-fit{width:150mm;height:214mm;object-fit:cover;max-width:182mm}
+.artph{width:132mm;height:190mm;display:flex;align-items:center;justify-content:center;border:1px dashed var(--line);
+  color:var(--faint);font-size:10pt;letter-spacing:.04em;border-radius:1mm;text-align:center;padding:10mm;line-height:1.5;box-shadow:none}
+.cap{margin-top:6mm;text-align:center}
+.cap .ttl{font-family:var(--serif);font-weight:360;font-size:24pt;line-height:1.04;color:var(--ink)}
+.cap .ttl em{font-style:italic;color:var(--gold)}
+.cap .ttl:empty{display:none}
+.cap .auth{font-size:10pt;letter-spacing:.3em;color:var(--soft);font-weight:600;margin-top:3mm}
+.cap .auth:empty{display:none}
+
+.c-bot{flex:none;text-align:center;margin-top:6mm}
+.nameline{display:flex;justify-content:center;align-items:flex-end;gap:16mm;margin-bottom:6mm}
+.nameline.hide{display:none}
+.nf{display:flex;align-items:flex-end;gap:4mm}
+.nl{font-size:8.5pt;letter-spacing:.24em;font-weight:700;color:var(--soft)}
+.nu{display:block;width:56mm;border-bottom:1px solid var(--ink);height:6mm}
+.nu.short{width:32mm}
+.badge .bn{font-size:12pt;color:var(--ink);display:inline-flex;align-items:baseline;gap:2mm}
+.badge .bn .en{font-family:var(--serif);font-weight:600;letter-spacing:.14em}
+.badge .bn .ko{font-family:var(--sans);font-weight:700;letter-spacing:.06em;font-size:11.5pt}
+.badge .bs{font-size:6.6pt;letter-spacing:.34em;color:var(--gold);margin-top:2mm;font-weight:600}
+.hide{display:none!important}
+
+@media print{
+  @page{size:A4;margin:0}
+  body{display:block;background:#fff}
+  .panel{display:none!important}
+  .stage{display:block;padding:0;overflow:visible}
+  .scaler{transform:none!important}
+  .cover{box-shadow:none;margin:0}
+}
+</style>
+</head>
+<body>
+<aside class=&quot;panel&quot;>
+  <h1>EPL 표지 빌더</h1>
+  <div class=&quot;sub&quot;>Cover Builder · 책 표지를 올리면 EPL 브랜딩이 입혀집니다</div>
+
+  <div class=&quot;fld&quot;>
+    <label>Book Cover · 표지 이미지</label>
+    <div class=&quot;drop&quot; id=&quot;drop&quot;>
+      <div class=&quot;big&quot;>이미지를 끌어다 놓거나 클릭</div>
+      <div class=&quot;sm&quot;>JPG · PNG · 세로형 표지 권장</div>
+    </div>
+    <input type=&quot;file&quot; id=&quot;file&quot; accept=&quot;image/*&quot; style=&quot;display:none&quot;>
+  </div>
+
+  <div class=&quot;fld&quot;><label>Title (선택)</label><input type=&quot;text&quot; id=&quot;i_title&quot; placeholder=&quot;예: Restart&quot;></div>
+  <div class=&quot;fld&quot;><label>Author (선택)</label><input type=&quot;text&quot; id=&quot;i_auth&quot; placeholder=&quot;예: GORDON KORMAN&quot;></div>
+  <div class=&quot;fld&quot;><label>Kicker · 부제 (선택)</label><input type=&quot;text&quot; id=&quot;i_kick&quot; placeholder=&quot;예: MIDDLE GRADE READER&quot;></div>
+
+  <div class=&quot;divider&quot;></div>
+
+  <div class=&quot;fld&quot;><label>배경</label>
+    <div class=&quot;seg&quot; id=&quot;bg&quot;><button data-v=&quot;light&quot; class=&quot;on&quot;>밝게</button><button data-v=&quot;dark&quot;>어둡게</button></div>
+  </div>
+  <div class=&quot;fld&quot;><label>이미지 맞춤</label>
+    <div class=&quot;seg&quot; id=&quot;fit&quot;><button data-v=&quot;contain&quot; class=&quot;on&quot;>전체 보이기</button><button data-v=&quot;cover&quot;>꽉 채우기</button></div>
+  </div>
+  <label class=&quot;chk&quot;><input type=&quot;checkbox&quot; id=&quot;c_name&quot; checked> 학생 이름칸(Name) 표시</label>
+  <label class=&quot;chk&quot;><input type=&quot;checkbox&quot; id=&quot;c_cap&quot;> 제목·저자 캡션 표시</label>
+
+  <div class=&quot;actions&quot;>
+    <button class=&quot;btn save&quot; id=&quot;btnSave&quot;>PNG 이미지로 저장</button>
+    <button class=&quot;btn print&quot; id=&quot;btnPrint&quot;>인쇄 / PDF로 저장</button>
+    <button class=&quot;btn ghost&quot; id=&quot;btnReset&quot;>초기화</button>
+  </div>
+  <div class=&quot;note&quot; id=&quot;note&quot;></div>
+  <div class=&quot;hint&quot;>PNG 저장이 안 보이면 <b>인쇄 / PDF</b>를 쓰세요. 인쇄 창에서 대상 <b>PDF로 저장</b>, 여백 <b>없음</b>, 배경 그래픽 <b>켜기</b> → A4 한 장.</div>
+</aside>
+
+<main class=&quot;stage&quot;>
+  <div class=&quot;scaler&quot; id=&quot;scaler&quot;>
+    <section class=&quot;cover&quot; id=&quot;cover&quot;>
+      <div class=&quot;wrap&quot;>
+        <div class=&quot;c-top&quot;>
+          <div class=&quot;mark&quot;>EPL <span class=&quot;g&quot;>·</span> LOGIC READING &amp;amp; WRITING</div>
+          <div class=&quot;toprule&quot;></div>
+        </div>
+        <div class=&quot;c-mid&quot;>
+          <div class=&quot;kick&quot; id=&quot;v_kick&quot;></div>
+          <div class=&quot;artwrap&quot; id=&quot;artwrap&quot;>
+            <div class=&quot;artph&quot; id=&quot;artph&quot;>Drop cover image here</div>
+            <img class=&quot;art&quot; id=&quot;art&quot; alt=&quot;&quot; style=&quot;display:none&quot;>
+          </div>
+          <div class=&quot;cap hide&quot; id=&quot;cap&quot;>
+            <div class=&quot;ttl&quot; id=&quot;v_title&quot;></div>
+            <div class=&quot;auth&quot; id=&quot;v_auth&quot;></div>
+          </div>
+        </div>
+        <div class=&quot;c-bot&quot;>
+          <div class=&quot;nameline&quot; id=&quot;v_name&quot;>
+            <span class=&quot;nf&quot;><span class=&quot;nl&quot;>NAME</span><span class=&quot;nu&quot;></span></span>
+            <span class=&quot;nf&quot;><span class=&quot;nl&quot;>DATE</span><span class=&quot;nu short&quot;></span></span>
+          </div>
+          <div class=&quot;badge&quot;>
+            <div class=&quot;bn&quot;><span class=&quot;en&quot;>EPL</span> <span class=&quot;ko&quot;>영어학원</span></div>
+            <div class=&quot;bs&quot;>EMPOWER &amp;nbsp;·&amp;nbsp; PRACTICE &amp;nbsp;·&amp;nbsp; LITERACY</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+const art=$(&quot;art&quot;), artph=$(&quot;artph&quot;), file=$(&quot;file&quot;), drop=$(&quot;drop&quot;), cover=$(&quot;cover&quot;), note=$(&quot;note&quot;);
+let hasImage=false;
+
+function showNote(msg){ note.textContent=msg; note.classList.add(&quot;show&quot;); }
+function clearNote(){ note.classList.remove(&quot;show&quot;); }
+
+/* ---- image load ---- */
+function loadFile(f){
+  if(!f || !f.type || !f.type.startsWith(&quot;image/&quot;)){ showNote(&quot;이미지 파일만 올릴 수 있습니다.&quot;); return; }
+  const r=new FileReader();
+  r.onload=e=>{ art.src=e.target.result; art.style.display=&quot;block&quot;; artph.style.display=&quot;none&quot;; hasImage=true; clearNote(); };
+  r.onerror=()=>showNote(&quot;이미지를 읽지 못했습니다. 다시 시도하세요.&quot;);
+  r.readAsDataURL(f);
+}
+drop.onclick=()=>file.click();
+file.onchange=e=>{ if(e.target.files[0]) loadFile(e.target.files[0]); };
+[&quot;dragenter&quot;,&quot;dragover&quot;].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add(&quot;hot&quot;);}));
+[&quot;dragleave&quot;,&quot;drop&quot;].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove(&quot;hot&quot;);}));
+drop.addEventListener(&quot;drop&quot;,e=>{ if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+window.addEventListener(&quot;paste&quot;,e=>{ const it=[...(e.clipboardData?.items||[])].find(i=>i.type.startsWith(&quot;image/&quot;)); if(it) loadFile(it.getAsFile()); });
+
+/* ---- text bindings ---- */
+function bindTitle(){
+  const t=$(&quot;i_title&quot;).value.trim();
+  if(!t){ $(&quot;v_title&quot;).innerHTML=&quot;&quot;; return; }
+  const p=t.split(/\s+/);
+  if(p.length>1){ const l=p.pop(); $(&quot;v_title&quot;).innerHTML=p.join(&quot; &quot;)+&quot; <em>&quot;+l+&quot;</em>&quot;; }
+  else $(&quot;v_title&quot;).innerHTML=&quot;<em>&quot;+t+&quot;</em>&quot;;
+}
+function syncCap(){ const has=$(&quot;c_cap&quot;).checked &amp;&amp; ($(&quot;i_title&quot;).value.trim()||$(&quot;i_auth&quot;).value.trim()); $(&quot;cap&quot;).classList.toggle(&quot;hide&quot;,!has); }
+$(&quot;i_title&quot;).oninput=()=>{bindTitle();syncCap();};
+$(&quot;i_auth&quot;).oninput=()=>{$(&quot;v_auth&quot;).textContent=$(&quot;i_auth&quot;).value.trim().toUpperCase();syncCap();};
+$(&quot;i_kick&quot;).oninput=()=>$(&quot;v_kick&quot;).textContent=$(&quot;i_kick&quot;).value.trim();
+
+/* ---- toggles ---- */
+function seg(el,fn){ el.addEventListener(&quot;click&quot;,e=>{ const b=e.target.closest(&quot;button&quot;); if(!b)return;
+  [...el.children].forEach(x=>x.classList.remove(&quot;on&quot;)); b.classList.add(&quot;on&quot;); fn(b.dataset.v); }); }
+seg($(&quot;bg&quot;), v=>cover.classList.toggle(&quot;dark&quot;,v===&quot;dark&quot;));
+seg($(&quot;fit&quot;),v=>art.classList.toggle(&quot;cover-fit&quot;,v===&quot;cover&quot;));
+$(&quot;c_name&quot;).onchange=e=>$(&quot;v_name&quot;).classList.toggle(&quot;hide&quot;,!e.target.checked);
+$(&quot;c_cap&quot;).onchange=syncCap;
+
+/* ---- reset ---- */
+$(&quot;btnReset&quot;).onclick=()=>{ [&quot;i_title&quot;,&quot;i_auth&quot;,&quot;i_kick&quot;].forEach(id=>$(id).value=&quot;&quot;); bindTitle();
+  $(&quot;v_auth&quot;).textContent=&quot;&quot;; $(&quot;v_kick&quot;).textContent=&quot;&quot;; syncCap();
+  art.src=&quot;&quot;; art.style.display=&quot;none&quot;; artph.style.display=&quot;flex&quot;; file.value=&quot;&quot;; hasImage=false; clearNote(); };
+
+/* ---- print ---- */
+$(&quot;btnPrint&quot;).onclick=()=>window.print();
+
+/* ---- PNG save via downloads capability + html2canvas ---- */
+let downloads=null;
+(async()=>{
+  try{ if(window.claude &amp;&amp; claude.use){ downloads = await claude.use(&quot;downloads&quot;); } }catch(e){ downloads=null; }
+})();
+
+async function renderPNG(){
+  if(typeof html2canvas===&quot;undefined&quot;) throw new Error(&quot;html2canvas_unavailable&quot;);
+  try{ if(document.fonts &amp;&amp; document.fonts.ready) await document.fonts.ready; }catch(e){}
+  const sc=$(&quot;scaler&quot;).style.transform; $(&quot;scaler&quot;).style.transform=&quot;none&quot;;
+  const bg = cover.classList.contains(&quot;dark&quot;) ? &quot;#182530&quot; : &quot;#f4f1ea&quot;;
+  const canvas = await html2canvas(cover, {scale:3, useCORS:true, backgroundColor:bg, logging:false});
+  $(&quot;scaler&quot;).style.transform=sc;
+  return await new Promise(res=>canvas.toBlob(b=>res(b), &quot;image/png&quot;));
+}
+function fname(){
+  const t=$(&quot;i_title&quot;).value.trim().replace(/[^\w가-힣 -]/g,&quot;&quot;).replace(/\s+/g,&quot;_&quot;);
+  return &quot;EPL_Cover_&quot;+(t||&quot;book&quot;)+&quot;.png&quot;;
+}
+function browserDownload(blob, filename){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement(&quot;a&quot;);
+  a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+}
+$(&quot;btnSave&quot;).onclick=async()=>{
+  const b=$(&quot;btnSave&quot;); const old=b.textContent;
+  b.disabled=true; b.textContent=&quot;만드는 중 ...&quot;;
+  try{
+    const blob=await renderPNG();
+    if(!blob) throw new Error(&quot;render_failed&quot;);
+    if(downloads){
+      // claude.ai 아티팩트: 내장 저장
+      await downloads.save({filename:fname(), data:blob});
+    }else{
+      // GitHub Pages / 로컬: 일반 브라우저 다운로드
+      browserDownload(blob, fname());
+    }
+    clearNote(); b.textContent=&quot;저장됨 ✓&quot;; setTimeout(()=>{b.textContent=old;},1600);
+  }catch(err){
+    const code=err&amp;&amp;err.code;
+    if(code===&quot;declined&quot;){ clearNote(); }
+    else if(code===&quot;rate_limited&quot;){ showNote(&quot;잠시 후 다시 눌러주세요.&quot;); }
+    else{ showNote(&quot;PNG 저장에 실패했습니다. ‘인쇄 / PDF’로 저장하세요.&quot;); }
+    b.textContent=old;
+  }finally{ b.disabled=false; }
+};
+
+/* ---- fit preview to window ---- */
+function fitStage(){ const s=$(&quot;scaler&quot;), avail=window.innerHeight-68, px=297*3.7795, k=Math.min(1,avail/px); s.style.transform=&quot;scale(&quot;+k+&quot;)&quot;; }
+window.addEventListener(&quot;resize&quot;,fitStage); fitStage();
+</script>
+</body>
+</html>
+"></iframe>
+</div>
 </div>
 
 <script>
@@ -2987,6 +3286,23 @@ drawGradeBooks();
   };
 })();
 
+</script>
+<script>
+(function(){
+  var mW=document.getElementById("mWork"), mC=document.getElementById("mCover");
+  var wr=document.getElementById("workRoot"), cr=document.getElementById("coverRoot");
+  var tb=document.getElementById("btnTeacher"), pb=document.getElementById("btnPrint");
+  function set(cover){
+    cr.style.display = cover?"block":"none";
+    wr.style.display = cover?"none":"";
+    if(mC) mC.classList.toggle("on",cover);
+    if(mW) mW.classList.toggle("on",!cover);
+    if(tb) tb.style.display=cover?"none":"";
+    if(pb) pb.style.display=cover?"none":"";
+  }
+  if(mW) mW.onclick=function(){ set(false); };
+  if(mC) mC.onclick=function(){ set(true); };
+})();
 </script>
 </body>
 </html>
